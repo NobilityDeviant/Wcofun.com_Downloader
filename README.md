@@ -6,6 +6,8 @@ Coded in JDK 8.
 
 You need java 8 to run this program. https://www.java.com/en/download/manual.jsp
 
+Download the releases here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
+
 JDK 8 is needed to compile it: https://www.openlogic.com/openjdk-downloads?field_java_parent_version_target_id=416&field_operating_system_target_id=All&field_architecture_target_id=All&field_java_package_target_id=All
 
 I use IntelliJ as an IDE: https://www.jetbrains.com/idea/download/ - The Community Version will work just fine.
@@ -39,3 +41,6 @@ Enjoy and have fun!
 
 Known Issue: This program does not support downloading 2 videos from one page.
 Idk why this website has them, but it's best to ignore them for now.
+
+I will fix the updater if i decide to update it in the future.
+For now just check back every now and then!
