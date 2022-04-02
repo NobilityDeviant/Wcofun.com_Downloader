@@ -33,7 +33,7 @@ You can interact with the downloads by using the Action menu buttons.
 
 Every download will go inside their respective Series folder as shown in the image above.
 
-# Settings:
+# Settings
 
 ![Alt text](images/wco_settings.png?raw=true "Settings Window")
 
@@ -47,7 +47,7 @@ Idk why this website has them, but it's best to ignore them for now.
 I will fix the updater if i decide to update it in the future.
 For now just check back every now and then!
 
-# Donate:
+# Donate
 
 Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
 
