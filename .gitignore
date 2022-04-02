@@ -1,1 +1,5 @@
 /out/
+/.idea/
+/resources/downloads.json
+/resources/series.json
+/resources/settings.json
