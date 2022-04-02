@@ -51,6 +51,6 @@ For now just check back every now and then!
 
 Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
 
-[![name](/images/blue.svg)](https://www.paypal.com/paypalme/nobilitydev)
+[![PayPal](/images/blue.svg)](https://www.paypal.com/paypalme/nobilitydev)
 
 
