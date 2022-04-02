@@ -1,4 +1,4 @@
-Wcofun.com Downloader
+# Wcofun.com Downloader
 
 Used to download videos and series from https://www.wcofun.com/
 
@@ -23,6 +23,8 @@ This downloader is multi-threaded, customizable, resizeable, fast and easy to us
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.com/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
 
+# Downloads
+
 All past and current downloads will go inside this organized tab here:
 
 ![Alt text](images/downloads.png?raw=true "Download Tab")
@@ -31,7 +33,7 @@ You can interact with the downloads by using the Action menu buttons.
 
 Every download will go inside their respective Series folder as shown in the image above.
 
-Settings:
+# Settings:
 
 ![Alt text](images/wco_settings.png?raw=true "Settings Window")
 
@@ -44,3 +46,11 @@ Idk why this website has them, but it's best to ignore them for now.
 
 I will fix the updater if i decide to update it in the future.
 For now just check back every now and then!
+
+# Donate:
+
+Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
+
+[![name](/images/blue.svg)](https://www.paypal.com/paypalme/nobilitydev)
+
+
