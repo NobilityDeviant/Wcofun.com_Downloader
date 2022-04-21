@@ -416,8 +416,10 @@ public class MainController implements Initializable {
             }
         } else if (src.equals(about)) {
             model.showMessage("About", "This is a FREE open source program to download videos from " + Model.WEBSITE
-                    + ". That's all. :) " + "\nWebsite: https://nobility.fun" + "\nAuthor Discord: Nobility#9814" +
-                    "\nTo use this program you must first install Google Chrome. Everything else should be " +
+                    + ". That's all. :) "
+                    + "\nAuthor Discord: Nobility#9814"
+                    + "\n Github: https://github.com/NobilityDeviant/"
+                    + "\nTo use this program you must first install Google Chrome. Everything else should be " +
                     "handled automatically." +
                     "\nYou find an episode or series link at " + Model.WEBSITE + " and paste it into " +
                     "the field. The default settings should be enough for most people." +
