@@ -1,7 +1,7 @@
 package com.nobility.downloader.history;
 
-import com.nobility.downloader.Main;
 import com.nobility.downloader.Model;
+import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.Tools;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -25,7 +25,6 @@ public class HistoryController implements Initializable {
     @FXML private TableColumn<SeriesHistory, TextField> link_column;
     @FXML private TableColumn<SeriesHistory, Integer> episodes_column;
     @FXML private TableColumn<SeriesHistory, String> date_column;
-    @FXML private TableColumn<SeriesHistory, MenuButton> actions_column;
     private final Model model;
     private final Stage stage;
 
@@ -44,7 +43,6 @@ public class HistoryController implements Initializable {
         link_column.setMaxWidth(1f * Integer.MAX_VALUE * 40);
         episodes_column.setMaxWidth(1f * Integer.MAX_VALUE * 7);
         date_column.setMaxWidth(1f * Integer.MAX_VALUE * 20);
-        actions_column.setMaxWidth(1f * Integer.MAX_VALUE * 8);
 
         date_column.setCellValueFactory(new PropertyValueFactory<>("dateAdded"));
         date_column.setSortType(TableColumn.SortType.DESCENDING);
@@ -59,6 +57,46 @@ public class HistoryController implements Initializable {
             return 0;
         };
         date_column.setComparator(dateComparator);
+        table.setRowFactory(callback -> {
+            TableRow<SeriesHistory> row = new TableRow<>();
+            ContextMenu menu = new ContextMenu();
+            row.emptyProperty().addListener((observable, oldValue, isEmpty) -> {
+                if (!isEmpty) {
+                    SeriesHistory history = row.getItem();
+                    MenuItem seriesDetails = new MenuItem("Series Details");
+                    seriesDetails.setOnAction(event -> model.openVideoDetails(history.getSeriesLink()));
+                    MenuItem openLink = new MenuItem("Open Series Link");
+                    openLink.setOnAction(event -> model.showLinkPrompt(history.getSeriesLink(), true));
+                    MenuItem copyLink = new MenuItem("Copy Series Link");
+                    copyLink.setOnAction(event -> model.showCopyPrompt(history.getSeriesLink(), false));
+                    MenuItem downloadSeries = new MenuItem("Download Series");
+                    downloadSeries.setOnAction(event -> {
+                        if (model.isRunning()) {
+                            model.showError("You can't download a series while the checker is running.");
+                            return;
+                        }
+                        model.getUrlTextField().setText(history.getSeriesLink());
+                        model.start();
+                        model.showMessage("Started download", "Launched video downloader for: " + history.getSeriesLink());
+                    });
+                    MenuItem removeFromList = new MenuItem("Remove From List");
+                    removeFromList.setOnAction(event -> {
+                        model.getHistorySave().removeSeries(history);
+                        table.getItems().remove(history);
+                        table.sort();
+                        model.saveSeriesHistory();
+                    });
+                    menu.getItems().addAll(seriesDetails, openLink, copyLink, downloadSeries, removeFromList);
+                    row.setContextMenu(menu);
+                    row.setOnMouseClicked(event -> {
+                        if (model.settings().getBoolean(Defaults.SHOWCONTEXTONCLICK)) {
+                            menu.show(stage, event.getScreenX(), event.getScreenY());
+                        }
+                    });
+                }
+            });
+            return row;
+        });
         name_column.setCellValueFactory(new PropertyValueFactory<>("seriesName"));
         episodes_column.setCellValueFactory(new PropertyValueFactory<>("episodes"));
         link_column.setCellValueFactory(row -> {
@@ -75,46 +113,6 @@ public class HistoryController implements Initializable {
             field.setAlignment(Pos.CENTER_LEFT);
             field.setText(history.getSeriesLink());
             return new SimpleObjectProperty<>(field);
-        });
-        actions_column.setCellValueFactory(row -> {
-            SeriesHistory history = row.getValue();
-            MenuButton menu = new MenuButton("");
-            menu.getStylesheets().add(String.valueOf(Main.class.getResource("/css/menubutton.css")));
-            int height = 22;
-            menu.setMaxHeight(height);
-            menu.setMinHeight(height);
-            menu.setPrefHeight(height);
-            int width = (int) actions_column.getWidth() - 10;
-            menu.setMaxWidth(width);
-            menu.setMinWidth(width);
-            menu.setPrefWidth(width);
-            menu.setAlignment(Pos.CENTER);
-
-            MenuItem seriesDetails = new MenuItem("Series Details");
-            seriesDetails.setOnAction(event -> model.openVideoDetails(history.getSeriesLink()));
-            MenuItem openLink = new MenuItem("Open Series Link");
-            openLink.setOnAction(event -> model.showLinkPrompt(history.getSeriesLink(), true));
-            MenuItem copyLink = new MenuItem("Copy Series Link");
-            copyLink.setOnAction(event -> model.showCopyPrompt(history.getSeriesLink(), false));
-            MenuItem downloadSeries = new MenuItem("Download Series");
-            downloadSeries.setOnAction(event -> {
-                if (model.isRunning()) {
-                    model.showError("You can't download a series while the checker is running.");
-                    return;
-                }
-                model.getUrlTextField().setText(history.getSeriesLink());
-                model.start();
-                model.showMessage("Started download", "Launched video downloader for: " + history.getSeriesLink());
-            });
-            MenuItem removeFromList = new MenuItem("Remove From List");
-            removeFromList.setOnAction(event -> {
-                model.getHistorySave().removeSeries(history);
-                table.getItems().remove(history);
-                table.sort();
-                model.saveSeriesHistory();
-            });
-            menu.getItems().addAll(seriesDetails, openLink, copyLink, downloadSeries, removeFromList);
-            return new SimpleObjectProperty<>(menu);
         });
         table.getItems().addAll(FXCollections.observableArrayList(model.getHistorySave().getSavedSeries()));
         table.sort();

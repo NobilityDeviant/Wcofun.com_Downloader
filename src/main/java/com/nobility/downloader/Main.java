@@ -1,5 +1,6 @@
 package com.nobility.downloader;
 
+import com.nobility.downloader.updates.UpdateManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -17,7 +18,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         Model model = new Model();
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(Model.FX_PATH + "newui.fxml"));
+        FXMLLoader loader = new FXMLLoader(Main.class.getResource(Model.FX_PATH + "newui.fxml"));
         loader.setControllerFactory((Class<?> controllerType) -> {
             try {
                 for (Constructor<?> con : controllerType.getConstructors()) {
@@ -37,7 +38,8 @@ public class Main extends Application {
         MainController controller = loader.getController();
         controller.setMainStage(primaryStage);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("WcoFun Downloader By Nobility ver. " + model.getUpdateManager().getVersion());
+        scene.getStylesheets().add(String.valueOf(getClass().getResource(Model.CSS_PATH + "contextmenu.css")));
+        primaryStage.setTitle("WcoFun Downloader By Nobility ver. " + UpdateManager.CURRENT_VERSION);
         primaryStage.setResizable(true);
         InputStream icon = getClass().getResourceAsStream(Model.MAIN_ICON);
         if (icon != null) {

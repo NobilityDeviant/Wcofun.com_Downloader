@@ -1,7 +1,7 @@
 package com.nobility.downloader.scraper;
 
 import com.nobility.downloader.Model;
-import com.nobility.downloader.scraper.settings.Defaults;
+import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.AlertBox;
 import javafx.scene.control.Alert;
 

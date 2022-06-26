@@ -1,18 +1,17 @@
 package com.nobility.downloader;
 
 import com.nobility.downloader.downloads.Download;
-import com.nobility.downloader.scraper.settings.Defaults;
+import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.AlertBox;
 import com.nobility.downloader.utils.StringChecker;
+import com.nobility.downloader.utils.Toast;
 import com.nobility.downloader.utils.Tools;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -40,16 +39,23 @@ import java.util.ResourceBundle;
 public class MainController implements Initializable {
 
     private final Model model;
-    @FXML public TextField tf_sub_url;
-    @FXML public TextArea print;
-    @FXML public MenuItem open_download_folder, about, open_settings, updates, open_download_history, open_website;
-    @FXML private Button stop_button, start_button;
-    @FXML private TableView<Download> download_table;
-    @FXML private TableColumn<Download, String> name_column, size_column, progress_column, date_column;
-    @FXML private TableColumn<Download, MenuButton> actions_column;
+    @FXML
+    public TextField tf_sub_url;
+    @FXML
+    public TextArea print;
+    @FXML
+    public MenuItem open_download_folder, about, open_settings, updates, open_download_history, open_website;
+    @FXML
+    private Button stop_button, start_button;
+    @FXML
+    private TableView<Download> download_table;
+    @FXML
+    private TableColumn<Download, String> name_column, size_column, progress_column, date_column;
 
     public MainController(Model model) {
         this.model = model;
+        //SeriesScaper seriesScaper = new SeriesScaper(model);
+        //seriesScaper.scrapeSeriesIntoFile();
     }
 
     public void setMainStage(Stage mainStage) {
@@ -79,7 +85,6 @@ public class MainController implements Initializable {
         date_column.setMaxWidth(1f * Integer.MAX_VALUE * 20);
         size_column.setMaxWidth(1f * Integer.MAX_VALUE * 10);
         progress_column.setMaxWidth(1f * Integer.MAX_VALUE * 7);
-        actions_column.setMaxWidth(1f * Integer.MAX_VALUE * 10);
 
         name_column.setCellValueFactory(p -> p.getValue().getNameProperty());
         size_column.setCellValueFactory(row -> new SimpleStringProperty(Tools.bytesToString(row
@@ -94,144 +99,131 @@ public class MainController implements Initializable {
                 Date date1 = sdf.parse(o1);
                 Date date2 = sdf.parse(o2);
                 return date1.compareTo(date2);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             return 0;
         };
         date_column.setComparator(dateComparator);
-        actions_column.setCellValueFactory(row -> {
-            Download download = row.getValue();
-            MenuButton menu = new MenuButton("");
-            menu.getStylesheets().add(String.valueOf(Main.class.getResource(Model.CSS_PATH + "menubutton.css")));
-            int height = 22;
-            menu.setMaxHeight(height);
-            menu.setMinHeight(height);
-            menu.setPrefHeight(height);
-            int width = (int) actions_column.getWidth() - 10;
-            menu.setMaxWidth(width);
-            menu.setMinWidth(width);
-            menu.setPrefWidth(width);
-            menu.setAlignment(Pos.CENTER);
-            MenuItem openFolder = new MenuItem("Open Folder");
-            openFolder.setOnAction(event -> model.openFolder(download.getDownloadPath(), true));
-            MenuItem deleteFile = new MenuItem("Delete File");
-            deleteFile.setOnAction(event ->
-                    model.showConfirm("Do you wish to delete this file?", () -> {
-                if (download.isDownloading()) {
-                    model.showError("You can't delete videos that are being downloaded.");
-                    return;
-                }
-                File file = new File(download.getDownloadPath());
-                if (file.exists()) {
-                    if (file.delete()) {
-                        model.showMessage("Success", "Successfully deleted this episode.");
-                    } else {
-                        model.showError("Unable to delete this file. No error thrown. Most likely folder permission issues.");
+
+        download_table.setRowFactory(param -> {
+            TableRow<Download> row = new TableRow<>();
+            row.emptyProperty().addListener((observable, oldValue, isEmpty) -> {
+                if (!isEmpty) {
+                    Download download = row.getItem();
+                    if (download != null) {
+                        ContextMenu menu = new ContextMenu();
+                        MenuItem openFolder = new MenuItem("Open Folder");
+                        openFolder.setOnAction(event -> model.openFolder(download.getDownloadPath(), true));
+                        MenuItem deleteFile = new MenuItem("Delete File");
+                        deleteFile.setOnAction(event ->
+                                model.showConfirm("Do you wish to delete this file?", () -> {
+                                    if (download.isDownloading()) {
+                                        Toast.makeToast(model.getMainStage(), "You can't delete videos that are being downloaded.");
+                                        return;
+                                    }
+                                    File file = new File(download.getDownloadPath());
+                                    if (file.exists()) {
+                                        if (file.delete()) {
+                                            model.showMessage("Success", "Successfully deleted this episode.");
+                                        } else {
+                                            model.showError("Unable to delete this file. No error thrown. Most likely folder permission issues.");
+                                        }
+                                    } else {
+                                        Toast.makeToast(model.getMainStage(), "The original file no longer exists.");
+                                    }
+                                }));
+                        MenuItem removeFromList = new MenuItem("Remove From List");
+                        removeFromList.setOnAction(event -> {
+                            if (download.isDownloading()) {
+                                Toast.makeToast(model.getMainStage(),"You can't remove downloads that are being downloaded.");
+                                return;
+                            }
+                            model.removeDownload(download);
+                        });
+
+                        MenuItem resumeDownload = new MenuItem("Resume Download");
+                        resumeDownload.setOnAction(event -> {
+                            if (download.isComplete()) {
+                                Toast.makeToast(model.getMainStage(),"This download is completed. You can't resume it.");
+                                return;
+                            }
+                            if (model.isRunning()) {
+                                if (model.getLinkUrls().contains(download.getUrl())) {
+                                    Toast.makeToast(model.getMainStage(), "This download is already in queue.");
+                                    return;
+                                }
+                                model.getLinks().add(download.toEpisode());
+                                model.showMessage("Added to downloads", "Successfully added " + download.getName() + " to current queue.");
+                            } else {
+                                tf_sub_url.setText(download.getUrl());
+                                start();
+                                model.showMessage("Started download", "Launched video downloader for: " + download.getName());
+                            }
+                        });
+                        MenuItem openDownloadUrl = new MenuItem("Open Download URL");
+                        openDownloadUrl.setOnAction(event -> model.showLinkPrompt(download.getUrl(), true));
+                        MenuItem copyDownloadUrl = new MenuItem("Copy Download URL");
+                        copyDownloadUrl.setOnAction(event -> model.showCopyPrompt(download.getUrl(), false));
+                        MenuItem seriesDetails = new MenuItem("Series Details");
+                        seriesDetails.setOnAction(event -> model.openVideoDetails(download.getSeriesLink()));
+                        MenuItem pauseDownload = new MenuItem("Pause Download");
+                        pauseDownload.setOnAction(event -> {
+                            //
+                            Toast.makeToast(model.getMainStage(), "Not implemented.");
+                        });
+                        MenuItem play = new MenuItem("Play Video");
+                        play.setOnAction(event -> {
+                            try {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().open(download.getDownloadFile());
+                                } else {
+                                    Toast.makeToast(model.getMainStage(), "Desktop is not supported.");
+                                }
+                            } catch (Exception e) {
+                                Toast.makeToast(model.getMainStage(), "Failed to play video. Check the console.");
+                                if (e.getLocalizedMessage().contains("No application is associated with the specified file for this operation")) {
+                                    System.out.println("There is no default application for opening this type of file.");
+                                } else {
+                                    System.out.println(e.getLocalizedMessage());
+                                }
+                            }
+                        });
+                        menu.getItems().addAll(
+                                openFolder,
+                                seriesDetails,
+                                openDownloadUrl,
+                                copyDownloadUrl
+                        );
+                        if (download.isDownloading() && !download.isComplete()) {
+                            menu.getItems().add(0, pauseDownload);
+                        }
+                        if (!download.isDownloading() && !download.isComplete()) {
+                            menu.getItems().add(0, resumeDownload);
+                        }
+                        if (!download.isDownloading() && download.isComplete()) {
+                            menu.getItems().add(0, play);
+                        }
+                        if (!download.isDownloading()) {
+                            menu.getItems().add(removeFromList);
+                        }
+                        if (download.isComplete() && !download.isDownloading()) {
+                            menu.getItems().add(deleteFile);
+                        }
+                        row.setContextMenu(menu);
+
+                        row.setOnMouseClicked(event -> {
+                            if (model.settings().getBoolean(Defaults.SHOWCONTEXTONCLICK)) {
+                                menu.show(model.getMainStage(), event.getScreenX(), event.getScreenY());
+                            }
+                        });
+
                     }
-                } else {
-                    model.showError("The original file no longer exists.");
-                }
-            }));
-            MenuItem removeFromList = new MenuItem("Remove From List");
-            removeFromList.setOnAction(event -> {
-                if (download.isDownloading()) {
-                    model.showError("You can't remove downloads that are being downloaded.");
-                    return;
-                }
-                model.removeDownload(download);
-            });
-            MenuItem resumeDownload = new MenuItem("Resume Download");
-            resumeDownload.setOnAction(event -> {
-                if (download.isComplete()) {
-                    model.showError("This download is completed. You can't resume it.");
-                    return;
-                }
-                if (model.isRunning()) {
-                    if (model.getLinkUrls().contains(download.getUrl())) {
-                        model.showError("This download is already in queue.");
-                        return;
-                    }
-                    model.getLinks().add(download.toEpisode());
-                    model.showMessage("Added to downloads", "Successfully added " + download.getName() + " to current queue.");
-                } else {
-                    tf_sub_url.setText(download.getUrl());
-                    start();
-                    model.showMessage("Started download", "Launched video downloader for: " + download.getName());
                 }
             });
-            MenuItem openDownloadUrl = new MenuItem("Open Download URL");
-            openDownloadUrl.setOnAction(event -> model.showLinkPrompt(download.getUrl(), true));
-            MenuItem copyDownloadUrl = new MenuItem("Copy Download URL");
-            copyDownloadUrl.setOnAction(event -> model.showCopyPrompt(download.getUrl(), false));
-            MenuItem seriesDetails = new MenuItem("Series Details");
-            seriesDetails.setOnAction(event -> model.openVideoDetails(download.getSeriesLink()));
-            menu.getItems().addAll(openFolder, openDownloadUrl, copyDownloadUrl,
-                    resumeDownload, deleteFile, removeFromList, seriesDetails);
-            return new SimpleObjectProperty<>(menu);
+            return row;
         });
         model.setTableView(download_table);
-
-        boolean[] latest = model.getUpdateManager().isLatestVersion();
-        String version = model.getUpdateManager().getLatestVersion();
-        if (!model.settings().getString(Defaults.UPDATEVERSION).equalsIgnoreCase(version)) {
-            model.settings().setBoolean(Defaults.DENIEDUPDATE, false);
-            model.saveSettings();
-        }
-        if (!latest[0]) {
-            if (latest[1]) {
-                model.settings().setString(Defaults.UPDATEVERSION, version);
-                model.saveSettings();
-                showUpdateConfirm("Update Available - v" + version + " - Required", true);
-            } else {
-                if (!model.settings().getBoolean(Defaults.DENIEDUPDATE)) {
-                    model.settings().setString(Defaults.UPDATEVERSION, version);
-                    model.saveSettings();
-                    showUpdateConfirm("Update Available - v" + version,false);
-                }
-            }
-        }
-        if (!latest[0] && latest[1]) {
-            model.showError("You must update your client to continue. Shutting down...");
-            System.exit(0);
-        }
-    }
-
-    private final Stage confirmStage = new Stage();
-
-    @FXML
-    private void showUpdateConfirm(String title, boolean required) {
-        FXMLLoader loader = new FXMLLoader(Main.class.getResource(Model.FX_PATH + "confirm.fxml"));
-        loader.setControllerFactory((Class<?> controllerType) -> {
-            try {
-                for (Constructor<?> con : controllerType.getConstructors()) {
-                    if (con.getParameterCount() == 1 && con.getParameterTypes()[0] == Model.class) {
-                        return con.newInstance(model);
-                    }
-                }
-                return controllerType.getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
-                e.printStackTrace(System.err);
-                System.exit(-1);
-                return null;
-            }
-        });
-        try {
-            Parent root = loader.load();
-            ConfirmController confirmController = loader.getController();
-            Scene scene = new Scene(root);
-            confirmController.setStage(confirmStage, required);
-            InputStream icon = Main.class.getResourceAsStream(Model.MAIN_ICON);
-            if (icon != null) {
-                confirmStage.getIcons().add(new Image(icon));
-            }
-            confirmStage.sizeToScene();
-            confirmStage.setTitle(title);
-            confirmStage.setResizable(false);
-            confirmStage.setScene(scene);
-            confirmStage.setOnCloseRequest(event -> confirmController.close());
-            confirmStage.showAndWait();
-        } catch (IOException var5) {
-            System.out.println("Message Error: " + var5.getMessage());
-        }
+        model.getUpdateManager().checkForUpdates(false, true);
     }
 
     private Stage settingsStage;
@@ -273,8 +265,7 @@ public class MainController implements Initializable {
             settingsStage.setScene(scene);
             settingsStage.sizeToScene();
             settingsStage.showAndWait();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Validation Error: " + e.getMessage());
         }
@@ -314,6 +305,7 @@ public class MainController implements Initializable {
         try {
             layout = loader.load();
             Scene scene = new Scene(layout);
+            scene.getStylesheets().add(String.valueOf(Main.class.getResource(Model.CSS_PATH + "contextmenu.css")));
             historyStage.toFront();
             historyStage.setScene(scene);
             historyStage.sizeToScene();
@@ -418,14 +410,18 @@ public class MainController implements Initializable {
             model.showMessage("About", "This is a FREE open source program to download videos from " + Model.WEBSITE
                     + ". That's all. :) "
                     + "\nAuthor Discord: Nobility#9814"
-                    + "\n Github: https://github.com/NobilityDeviant/"
+                    + "\nGithub: https://github.com/NobilityDeviant/"
                     + "\nTo use this program you must first install Google Chrome. Everything else should be " +
                     "handled automatically." +
                     "\nYou find an episode or series link at " + Model.WEBSITE + " and paste it into " +
                     "the field. The default settings should be enough for most people." +
                     "\nIf you have any issues, please let me know on Discord.");
         } else if (src.equals(updates)) {
-            showUpdateConfirm("Check For Updates", false);
+            if (model.settings().getBoolean(Defaults.DENIEDUPDATE)) {
+                model.settings().setBoolean(Defaults.DENIEDUPDATE, false);
+                model.saveSettings();
+            }
+            model.getUpdateManager().checkForUpdates(true, true);
         } else if (src.equals(open_website)) {
             model.showLinkPrompt(Model.WEBSITE, true);
         }

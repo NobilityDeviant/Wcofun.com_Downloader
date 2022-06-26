@@ -2,15 +2,13 @@ package com.nobility.downloader.scraper;
 
 import com.nobility.downloader.Model;
 import com.nobility.downloader.history.SeriesHistory;
-import com.nobility.downloader.scraper.settings.Defaults;
+import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.Tools;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.IOException;
 import java.util.Collections;

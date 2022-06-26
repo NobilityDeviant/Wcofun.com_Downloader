@@ -1,5 +1,8 @@
 /out/
+/build/
 /.idea/
+/wco website online detection.txt/
+/dubbed.txt/
 /resources/downloads.json
 /resources/series.json
 /resources/settings.json

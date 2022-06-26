@@ -1,17 +1,13 @@
 package com.nobility.downloader.scraper;
 
+import com.nobility.downloader.DriverBase;
 import com.nobility.downloader.Model;
 import com.nobility.downloader.downloads.Download;
 import com.nobility.downloader.downloads.DownloadUpdater;
-import com.nobility.downloader.scraper.settings.Defaults;
-import com.nobility.downloader.utils.StringChecker;
+import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.Tools;
 import org.openqa.selenium.By;
-import org.openqa.selenium.PageLoadStrategy;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -24,28 +20,23 @@ import java.net.URL;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("unused")
-public class VideoDownloader implements Runnable {
+public class VideoDownloader extends DriverBase implements Runnable {
 
     private final String path;
-    private final ChromeOptions options = new ChromeOptions();
-    private WebDriver driver = null;
-    private final Model model;
     private final String userAgent;
     private Episode episode;
     private Download currentDownload;
 
     public VideoDownloader(Model model, String path) {
-        this.model = model;
+        super(model);
         this.path = path;
         userAgent = model.getRandomUserAgent();
     }
 
     @Override
     public void run() {
-        setupDriver();
         while (model.isRunning()) {
             if (model.settings().getInteger(Defaults.MAXLINKS) != 0) {
                 if (model.getDownloadsFinishedForSession() >= model.settings().getInteger(Defaults.MAXLINKS)) {
@@ -94,7 +85,7 @@ public class VideoDownloader implements Runnable {
             } else if (driver.getPageSource().contains("video-js_html5_api")) {
                 flag = 2;
             }
-            WebDriverWait wait = new WebDriverWait(driver, 30);
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
             try {
                 wait.pollingEvery(Duration.ofSeconds(3)).until(ExpectedConditions.visibilityOfElementLocated(By.id(flag == 0 ? "anime-js-0"
                         : flag == 1 ? "cizgi-js-0" : "video-js_html5_api")));
@@ -162,34 +153,7 @@ public class VideoDownloader implements Runnable {
                         + "\nReattempting...");
             }
         }
-        model.getRunningDrivers().remove(driver);
-        driver.close();
-        driver.quit();
-    }
-
-    private void setupDriver() {
-        options.setHeadless(true);
-        options.setPageLoadStrategy(PageLoadStrategy.EAGER);
-        options.addArguments("start-maximized");
-        options.addArguments("--no-sandbox"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-infobars"); //https://stackoverflow.com/a/43840128/1689770
-        options.addArguments("--disable-dev-shm-usage"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-browser-side-navigation"); //https://stackoverflow.com/a/49123152/1689770
-        options.addArguments("--disable-gpu");
-        options.addArguments("enable-automation");
-        options.addArguments("--mute-audio");
-        options.addArguments("user-agent=" + userAgent);
-        if (!StringChecker.isNullOrEmpty(model.settings().getString(Defaults.PROXY))) {
-            options.addArguments("--proxy-server=" + model.settings().getString(Defaults.PROXY));
-        }
-        driver = new ChromeDriver(options);
-        driver.manage().timeouts().implicitlyWait(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        driver.manage().timeouts().pageLoadTimeout(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        driver.manage().timeouts().setScriptTimeout(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        model.getRunningDrivers().add(driver);
+        killDriver();
     }
 
     private long fileSize(URL url) throws IOException {

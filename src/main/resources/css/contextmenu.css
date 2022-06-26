@@ -1,0 +1,24 @@
+.menu-button .label {
+    /*-fx-background-color: #05071F; changes the labels bg*/
+    -fx-text-fill : #e7e5e5;
+ }
+
+.menu-item:focused {
+      -fx-background-color:  #124a70;
+ }
+
+.menu-item .label {
+    -fx-text-fill: white;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: white;
+}
+
+.context-menu {
+    -fx-skin: "com.sun.javafx.scene.control.skin.ContextMenuSkin";
+    -fx-background-color: #2f73a1;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 6 6 6, 0 5 5 5, 0 4 4 4;
+    -fx-padding: 0.333333em 0.083333em 0.666667em 0.083333em;
+}

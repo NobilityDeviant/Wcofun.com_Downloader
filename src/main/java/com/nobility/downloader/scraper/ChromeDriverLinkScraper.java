@@ -1,57 +1,23 @@
 package com.nobility.downloader.scraper;
 
+import com.nobility.downloader.DriverBase;
 import com.nobility.downloader.Model;
 import com.nobility.downloader.history.SeriesHistory;
-import com.nobility.downloader.scraper.settings.Defaults;
-import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.Tools;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.openqa.selenium.PageLoadStrategy;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
-public class ChromeDriverLinkScraper implements Runnable {
+public class ChromeDriverLinkScraper extends DriverBase implements Runnable {
 
-    private final ChromeOptions options = new ChromeOptions();
-    private WebDriver driver = null;
-    private final Model model;
     private final String url;
 
     public ChromeDriverLinkScraper(Model model, String url) {
-        this.model = model;
+        super(model);
         this.url = url;
-        setupDriver();
-    }
-
-    private void setupDriver() {
-        options.setHeadless(true);
-        options.setPageLoadStrategy(PageLoadStrategy.EAGER);
-        options.addArguments("--no-sandbox"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-infobars"); //https://stackoverflow.com/a/43840128/1689770
-        options.addArguments("--disable-dev-shm-usage"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-browser-side-navigation"); //https://stackoverflow.com/a/49123152/1689770
-        options.addArguments("--disable-gpu");
-        options.addArguments("enable-automation");
-        options.addArguments("--mute-audio");
-        options.addArguments("user-agent=" + model.getRandomUserAgent());
-        if (!StringChecker.isNullOrEmpty(model.settings().getString(Defaults.PROXY))) {
-            options.addArguments("--proxy-server=" + model.settings().getString(Defaults.PROXY));
-        }
-        driver = new ChromeDriver(options);
-        driver.manage().timeouts().implicitlyWait(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        driver.manage().timeouts().pageLoadTimeout(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        driver.manage().timeouts().setScriptTimeout(model.settings()
-                .getInteger(Defaults.PROXYTIMEOUT), TimeUnit.SECONDS);
-        model.getRunningDrivers().add(driver);
     }
 
     @Override
@@ -107,11 +73,7 @@ public class ChromeDriverLinkScraper implements Runnable {
         } catch (Exception e) {
             System.err.println("Failed to grab episode links for: " + url + " Error: " + e.getLocalizedMessage());
         } finally {
-            if (driver != null) {
-                model.getRunningDrivers().remove(driver);
-                driver.close();
-                driver.quit();
-            }
+            killDriver();
         }
     }
 }

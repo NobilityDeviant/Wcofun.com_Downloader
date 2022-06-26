@@ -18,6 +18,17 @@ public final class Toast {
         makeText(ownerStage, text, 3_500, 500, 500);
     }
 
+    public static void makeToast(Stage ownerStage, String text, Exception e) {
+        makeText(
+                ownerStage,
+                text
+                + "\n" + "Error: " + e.getLocalizedMessage(),
+                3_500,
+                500,
+                500
+        );
+    }
+
     public static void makeText(Stage ownerStage, String toastMsg, int toastDelay, int fadeInDelay, int fadeOutDelay) {
 
         final Stage toastStage = new Stage();

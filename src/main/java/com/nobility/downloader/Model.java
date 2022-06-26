@@ -5,9 +5,13 @@ import com.nobility.downloader.downloads.DownloadSave;
 import com.nobility.downloader.history.HistorySave;
 import com.nobility.downloader.scraper.BuddyHandler;
 import com.nobility.downloader.scraper.Episode;
-import com.nobility.downloader.scraper.settings.Defaults;
-import com.nobility.downloader.scraper.settings.JsonManager;
-import com.nobility.downloader.scraper.settings.Settings;
+import com.nobility.downloader.settings.Defaults;
+import com.nobility.downloader.settings.JsonManager;
+import com.nobility.downloader.settings.Settings;
+import com.nobility.downloader.series.SeriesDetails;
+import com.nobility.downloader.series.SeriesDetailsController;
+import com.nobility.downloader.updates.ConfirmController;
+import com.nobility.downloader.updates.UpdateManager;
 import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.TextOutput;
 import com.nobility.downloader.utils.Toast;
@@ -19,10 +23,9 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.*;
 import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -74,11 +77,10 @@ public class Model {
     private final Desktop desktop = Desktop.getDesktop();
     private TableView<Download> tableView;
     private final List<WebDriver> runningDrivers = Collections.synchronizedList(new ArrayList<>());
+    public List<SeriesDetails> details = Collections.synchronizedList(new ArrayList<>());
 
     @FXML private TextField tf_sub_url;
     @FXML private Button stopButton, startButton;
-    @FXML private ProgressBar updateProgressBar;
-    @FXML private Label updateFileProgress;
 
     public Model() {
         reader = new BuddyHandler(this);
@@ -113,6 +115,45 @@ public class Model {
         if (settings.getBoolean(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
             System.setProperty("webdriver.chrome.silentOutput", "true");
             Logger.getLogger("org.openqa.selenium").setLevel(Level.OFF);
+        }
+    }
+
+    private final Stage confirmStage = new Stage();
+
+    @FXML
+    public void showUpdateConfirm(String title, boolean required, boolean upToDate) {
+        FXMLLoader loader = new FXMLLoader(Main.class.getResource(Model.FX_PATH + "confirm.fxml"));
+        loader.setControllerFactory((Class<?> controllerType) -> {
+            try {
+                for (Constructor<?> con : controllerType.getConstructors()) {
+                    if (con.getParameterCount() == 1 && con.getParameterTypes()[0] == Model.class) {
+                        return con.newInstance(this);
+                    }
+                }
+                return controllerType.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+                return null;
+            }
+        });
+        try {
+            Parent root = loader.load();
+            ConfirmController confirmController = loader.getController();
+            Scene scene = new Scene(root);
+            confirmController.setStage(confirmStage, required, upToDate);
+            InputStream icon = Main.class.getResourceAsStream(Model.MAIN_ICON);
+            if (icon != null) {
+                confirmStage.getIcons().add(new Image(icon));
+            }
+            confirmStage.sizeToScene();
+            confirmStage.setTitle(title);
+            confirmStage.setResizable(false);
+            confirmStage.setScene(scene);
+            confirmStage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Message Error: " + e.getMessage());
         }
     }
 
@@ -161,7 +202,6 @@ public class Model {
                 detailsStage.sizeToScene();
                 SeriesDetailsController controller = loader.getController();
                 try {
-                    controller.loadSeries();
                     detailsStage.show();
                 } catch (Exception e) {
                     showError("Error loading content from: " + link + " \n\nError: " + e.getLocalizedMessage());
@@ -476,6 +516,24 @@ public class Model {
         });
     }
 
+    public void showConfirm(String message, Runnable runnable, Runnable denyRunnable) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message,
+                ButtonType.CANCEL, ButtonType.YES);
+        alert.getDialogPane().getStylesheets().add(String.valueOf(Main.class.getResource(DIALOG_PATH)));
+        alert.getDialogPane().getStyleClass().add("dialog");
+        alert.showAndWait().ifPresent(buttonType -> {
+            if (buttonType.equals(ButtonType.YES)) {
+                if (runnable != null) {
+                    runnable.run();
+                }
+            } else {
+                if (denyRunnable != null) {
+                    denyRunnable.run();
+                }
+            }
+        });
+    }
+
     public void showCopyPrompt(String text, boolean prompt) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         final ClipboardContent content = new ClipboardContent();
@@ -501,6 +559,23 @@ public class Model {
         }
     }
 
+    public void openFile(File file, boolean toastOnError) {
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(file);
+            } else {
+                throw new Exception("Desktop is not supported.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Failed to open file. Error: " + e.getLocalizedMessage());
+            if (toastOnError) {
+                Platform.runLater(() ->
+                        Toast.makeToast(mainStage, "Failed to open file.", e));
+            }
+        }
+    }
+
     public TextField getUrlTextField() {
         return tf_sub_url;
     }
@@ -515,22 +590,6 @@ public class Model {
 
     public boolean isClientUpdating() {
         return clientUpdating;
-    }
-
-    public void setUpdateFileProgress(Label updateFileProgress) {
-        this.updateFileProgress = updateFileProgress;
-    }
-
-    public Label getUpdateFileProgress() {
-        return updateFileProgress;
-    }
-
-    public void setUpdateProgressBar(ProgressBar updateProgressBar) {
-        this.updateProgressBar = updateProgressBar;
-    }
-
-    public ProgressBar getUpdateProgressBar() {
-        return updateProgressBar;
     }
 
     public int getDownloadsFinishedForSession() {
