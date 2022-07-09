@@ -23,6 +23,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+//todo scrape all categories
+//organize them and divide them into lists
+//move the start method to model so we can launch it outside the main controller
+//add pause video
+//add queued downloads with a progress of "Waiting..."
+//add a way to add downloads to the queue while it's downloading
+//add a way to download mutliple urls
 public class SeriesScaper extends DriverBase {
 
     private final String dubbedSeries = "https://www.wcofun.com/dubbed-anime-list";

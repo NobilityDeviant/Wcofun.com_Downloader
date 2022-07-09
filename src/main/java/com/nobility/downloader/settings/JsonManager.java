@@ -61,7 +61,7 @@ public class JsonManager {
             settings = mapper.readValue(new File(save.getAbsolutePath(), settingsName), Settings.class);
         } catch (IOException e) {
             //e.printStackTrace();
-            System.err.println("Unable to find settings save file. Creating new one...");
+            System.err.println("Unable to find or load settings save file. Creating new one...");
         }
         return settings;
     }
@@ -101,7 +101,7 @@ public class JsonManager {
             downloadSave = mapper.readValue(new File(save.getAbsolutePath(), downloadsName), DownloadSave.class);
         } catch (IOException e) {
             //e.printStackTrace();
-            System.err.println("Unable to find downloads save file. Creating new one...");
+            System.err.println("Unable to find or load downloads save file. Creating new one...");
         }
         return downloadSave;
     }
@@ -145,7 +145,7 @@ public class JsonManager {
             historySave = mapper.readValue(new File(save.getAbsolutePath(), seriesName), HistorySave.class);
         } catch (IOException e) {
             //e.printStackTrace();
-            System.err.println("Unable to find history save file. Creating new one...");
+            System.err.println("Unable to find or load history save file. Creating new one...");
         }
         return historySave;
     }

@@ -6,7 +6,6 @@ import com.nobility.downloader.utils.AlertBox;
 import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.Toast;
 import com.nobility.downloader.utils.Tools;
-import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -19,6 +18,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Modality;
@@ -44,7 +44,7 @@ public class MainController implements Initializable {
     @FXML
     public TextArea print;
     @FXML
-    public MenuItem open_download_folder, about, open_settings, updates, open_download_history, open_website;
+    public MenuItem open_download_folder, about, open_settings, updates, open_download_history, open_website, open_github;
     @FXML
     private Button stop_button, start_button;
     @FXML
@@ -86,11 +86,11 @@ public class MainController implements Initializable {
         size_column.setMaxWidth(1f * Integer.MAX_VALUE * 10);
         progress_column.setMaxWidth(1f * Integer.MAX_VALUE * 7);
 
-        name_column.setCellValueFactory(p -> p.getValue().getNameProperty());
+        name_column.setCellValueFactory(new PropertyValueFactory<>("name"));
         size_column.setCellValueFactory(row -> new SimpleStringProperty(Tools.bytesToString(row
                 .getValue().getFileSize())));
-        progress_column.setCellValueFactory(p -> p.getValue().getProgressProperty());
-        date_column.setCellValueFactory(p -> p.getValue().getDateAddedProperty());
+        progress_column.setCellValueFactory(row -> row.getValue().getProgress());
+        date_column.setCellValueFactory(new PropertyValueFactory<>("dateAdded"));
         date_column.setSortType(TableColumn.SortType.DESCENDING);
         download_table.getSortOrder().add(date_column);
         Comparator<String> dateComparator = (o1, o2) -> {
@@ -153,11 +153,11 @@ public class MainController implements Initializable {
                                     return;
                                 }
                                 model.getLinks().add(download.toEpisode());
-                                model.showMessage("Added to downloads", "Successfully added " + download.getName() + " to current queue.");
+                                Toast.makeToast(model.getMainStage(), "Successfully added " + download.getName() + " to current queue.");
                             } else {
                                 tf_sub_url.setText(download.getUrl());
                                 start();
-                                model.showMessage("Started download", "Launched video downloader for: " + download.getName());
+                                Toast.makeToast(model.getMainStage(), "Launched video downloader for: " + download.getName());
                             }
                         });
                         MenuItem openDownloadUrl = new MenuItem("Open Download URL");
@@ -166,6 +166,8 @@ public class MainController implements Initializable {
                         copyDownloadUrl.setOnAction(event -> model.showCopyPrompt(download.getUrl(), false));
                         MenuItem seriesDetails = new MenuItem("Series Details");
                         seriesDetails.setOnAction(event -> model.openVideoDetails(download.getSeriesLink()));
+                        MenuItem copySeriesLink = new MenuItem("Copy Series Lihk");
+                        copySeriesLink.setOnAction(event -> model.showCopyPrompt(download.getSeriesLink(), false));
                         MenuItem pauseDownload = new MenuItem("Pause Download");
                         pauseDownload.setOnAction(event -> {
                             //
@@ -182,7 +184,7 @@ public class MainController implements Initializable {
                             } catch (Exception e) {
                                 Toast.makeToast(model.getMainStage(), "Failed to play video. Check the console.");
                                 if (e.getLocalizedMessage().contains("No application is associated with the specified file for this operation")) {
-                                    System.out.println("There is no default application for opening this type of file.");
+                                    System.out.println("There is no default application for opening this type of file. (mp4)");
                                 } else {
                                     System.out.println(e.getLocalizedMessage());
                                 }
@@ -190,10 +192,13 @@ public class MainController implements Initializable {
                         });
                         menu.getItems().addAll(
                                 openFolder,
-                                seriesDetails,
                                 openDownloadUrl,
                                 copyDownloadUrl
                         );
+                        if (!StringChecker.isNullOrEmpty(download.getSeriesLink())) {
+                            menu.getItems().add(seriesDetails);
+                            menu.getItems().add(copySeriesLink);
+                        }
                         if (download.isDownloading() && !download.isComplete()) {
                             menu.getItems().add(0, pauseDownload);
                         }
@@ -323,63 +328,7 @@ public class MainController implements Initializable {
 
     @FXML
     private void start() {
-        if (model.isRunning()) {
-            return;
-        }
-        String url = tf_sub_url.getText();
-        if (StringChecker.isNullOrEmpty(url)) {
-            model.showError("You must input a series or show link first. \n\nExamples: \n\n"
-                    + "Series: " + Model.EXAMPLE_SERIES + "\n\n Episode: " + Model.EXAMPLE_SHOW);
-            return;
-        }
-        model.settings().setString(Defaults.LASTDOWNLOAD, url);
-        model.saveSettings();
-        /*if (!url.toLowerCase(Locale.US).contains(model.getWebsite())) {*model.showError("Your url must start with " + model.getWebsite() + " HTTPS Only");
-            return;
-        }*/
-        if (model.settings().getInteger(Defaults.THREADS) < 1) {
-            model.showError("Your download threads must be higher than 0.");
-            return;
-        }
-        if (model.settings().getInteger(Defaults.THREADS) > 10) {
-            model.showError("Your download threads must be lower than 10.");
-            return;
-        }
-        if (model.settings().getInteger(Defaults.MAXLINKS) > 9999) {
-            model.showError("Your episodes can't be higher than 9999.");
-            return;
-        }
-        if (model.settings().getInteger(Defaults.MAXLINKS) < 0) {
-            model.showError("Your episodes can't be lower than 0.");
-            return;
-        }
         model.start();
-        model.getLinks().clear();
-        model.setLinksFound(0);
-        model.setDownloadsFinishedForSession(0);
-        model.saveSettings();
-        new Thread(() -> {
-            try {
-                model.getReader().update(url, false);
-            } catch (Exception e) {
-                try {
-                    System.err.println(e.getMessage());
-                    model.getReader().update(url, true);
-                } catch (Exception e1) {
-                    Platform.runLater(() -> model.showError("Error reading episodes from this url. " + e1.getLocalizedMessage()));
-                    model.stop();
-                    return;
-                }
-            }
-            if (model.getLinks().isEmpty()) {
-                Platform.runLater(() -> model.showError("Unable to find any episodes from this url."));
-                model.stop();
-                return;
-            }
-            model.settings().setString(Defaults.LASTDOWNLOAD, "");
-            model.saveSettings();
-            model.getReader().launch();
-        }).start();
     }
 
     @FXML
@@ -424,6 +373,8 @@ public class MainController implements Initializable {
             model.getUpdateManager().checkForUpdates(true, true);
         } else if (src.equals(open_website)) {
             model.showLinkPrompt(Model.WEBSITE, true);
+        } else if (src.equals(open_github)) {
+            model.showLinkPrompt(Model.GITHUB, true);
         }
     }
 }

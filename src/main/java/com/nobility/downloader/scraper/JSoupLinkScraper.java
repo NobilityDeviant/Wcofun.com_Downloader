@@ -30,11 +30,18 @@ public class JSoupLinkScraper implements Runnable {
             if (!StringChecker.isNullOrEmpty(model.settings().getString(Defaults.PROXY))) {
                 String[] proxy = model.settings().getString(Defaults.PROXY).split(":");
                 doc = Jsoup.connect(url).proxy(proxy[0], Integer.parseInt(proxy[1]))
-                        .userAgent(model.getRandomUserAgent()).timeout(model.settings()
-                                .getInteger(Defaults.PROXYTIMEOUT) * 1000).get();
+                        //.userAgent(model.sessionUserAgent())
+                        //.cookies(model.sessionCookies())
+                        .userAgent(model.getRandomUserAgent())
+                        .timeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000)
+                        .get();
             } else {
-                doc = Jsoup.connect(url).userAgent(model.getRandomUserAgent()).timeout(model
-                        .settings().getInteger(Defaults.PROXYTIMEOUT) * 1000).get();
+                doc = Jsoup.connect(url)
+                        //.userAgent(model.sessionUserAgent())
+                        //.cookies(model.sessionCookies())
+                        .userAgent(model.getRandomUserAgent())
+                        .timeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000)
+                        .get();
             }
             Elements videoTitle = doc.getElementsByClass("video-title");
             Elements elements = doc.getElementsByClass("cat-eps");

@@ -3,6 +3,7 @@ package com.nobility.downloader.settings;
 import com.nobility.downloader.Model;
 import com.nobility.downloader.utils.AlertBox;
 import com.nobility.downloader.utils.StringChecker;
+import com.nobility.downloader.utils.Toast;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
@@ -78,7 +79,7 @@ public class SettingsController implements Initializable {
             int size = model.getHistorySave().getSavedSeries().size();
             model.getHistorySave().getSavedSeries().clear();
             model.saveSeriesHistory();
-            model.showMessage("Success", "Cleared " + size + " download history from your settings.");
+            Toast.makeToast(model.getMainStage(), "Cleared " + size + " download history from your settings.");
         });
     }
 
@@ -93,7 +94,7 @@ public class SettingsController implements Initializable {
                 model.getDownloadSave().getDownloads().clear();
                 model.getTableView().getItems().clear();
                 model.saveDownloads();
-                model.showMessage("Success", "Cleared " + size + " downloads from your settings.");
+                Toast.makeToast(model.getMainStage(), "Cleared " + size + " downloads from your settings.");
         });
     }
 
@@ -115,7 +116,7 @@ public class SettingsController implements Initializable {
                 } else {
                     Runtime.getRuntime().exec("pkill -f \"(chrome)?(--headless)\"");
                 }
-                model.showMessage("Success", "Successfully killed all chrome.exe and chromedriver.exe processes.");
+                Toast.makeToast(model.getMainStage(), "Successfully killed all chrome.exe and chromedriver.exe processes.");
             } catch (Exception e) {
                 model.showError("Failed to close one or more chrome processes. Error: " + e.getLocalizedMessage());
             }
@@ -143,36 +144,30 @@ public class SettingsController implements Initializable {
     @FXML
     private void button_save_action() {
         if (field_threads.getText().isEmpty()) {
-            AlertBox.show(Alert.AlertType.ERROR, "Threads can't be empty.",
-                    "Please fill in the threads option.");
+            Toast.makeToast(model.getMainStage(), "Threads can't be empty.");
             return;
         }
         if (field_links.getText().isEmpty()) {
-            AlertBox.show(Alert.AlertType.ERROR, "Episodes can't be empty.",
-                    "Please fill in the episodes option.");
+            Toast.makeToast(model.getMainStage(), "Episodes can't be empty.");
             return;
         }
         if (field_proxytimeout.getText().isEmpty()) {
-            AlertBox.show(Alert.AlertType.ERROR, "Timeout can't be empty.",
-                    "");
+            Toast.makeToast(model.getMainStage(), "Timeout can't be empty.");
             return;
         }
         if (field_download.getText().isEmpty()) {
-            AlertBox.show(Alert.AlertType.ERROR, "Download Folder can't be empty.",
-                    "");
+            Toast.makeToast(model.getMainStage(), "Download folder can't be empty.");
             return;
         }
         if (!new File(field_download.getText()).exists()) {
-            AlertBox.show(Alert.AlertType.ERROR, "This Download Folder does not exist on your computer.",
-                    "");
+            Toast.makeToast(model.getMainStage(), "This download folder does not exist.");
             return;
         }
         if (!StringChecker.isNullOrEmpty(field_proxy.getText())) {
             byte res = isValidProxy(field_proxy.getText());
             switch (res) {
                 case 2:
-                    AlertBox.show(Alert.AlertType.ERROR, "Invalid Port",
-                            "Ports can only be between 1-65535");
+                    Toast.makeToast(model.getMainStage(), "Ports can only be between 1-65535");
                     return;
                 case -1:
                     AlertBox.show(Alert.AlertType.ERROR, "Not a valid proxy",
@@ -213,12 +208,10 @@ public class SettingsController implements Initializable {
                 model.settings().setString(Defaults.SAVEFOLDER, field_download.getText());
                 model.settings().setBoolean(Defaults.SHOWCONTEXTONCLICK, cb_showcontext.isSelected());
                 model.saveSettings();
-                AlertBox.show(Alert.AlertType.INFORMATION, "Settings Saved",
-                        "The changes made have been saved to the disk!");
+                Toast.makeToast(model.getMainStage(), "Settings successfully saved.");
                 button_save.setDisable(true);
             } else {
-                AlertBox.show(Alert.AlertType.INFORMATION, "Settings are corrupted",
-                        "Restart the application before using it.");
+                Toast.makeToast(model.getMainStage(), "Settings are corrupted. Restart the application.");
             }
         }
     }

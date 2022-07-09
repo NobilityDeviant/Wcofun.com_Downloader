@@ -5,6 +5,7 @@ import com.nobility.downloader.Model;
 import com.nobility.downloader.downloads.Download;
 import com.nobility.downloader.downloads.DownloadUpdater;
 import com.nobility.downloader.settings.Defaults;
+import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.Tools;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
@@ -12,27 +13,23 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-@SuppressWarnings("unused")
 public class VideoDownloader extends DriverBase implements Runnable {
 
     private final String path;
-    private final String userAgent;
     private Episode episode;
     private Download currentDownload;
 
     public VideoDownloader(Model model, String path) {
         super(model);
         this.path = path;
-        userAgent = model.getRandomUserAgent();
     }
 
     @Override
@@ -50,22 +47,28 @@ public class VideoDownloader extends DriverBase implements Runnable {
             if (episode == null) {
                 break;
             }
-            File save = new File(path + File.separator + episode.getName() + ".mp4");
-            currentDownload = model.getDownloadForUrl(episode.getLink());
-            if (currentDownload != null && currentDownload.isComplete()) {
-                System.out.println("Skipping completed video: " + episode.getName());
-                currentDownload.setDownloadPath(save.getAbsolutePath());
-                currentDownload.setProgressProperty("100%");
-                currentDownload.setDownloading(false);
-                model.updateDownload(currentDownload);
-                episode = null;
-                continue;
-            }
             String url = episode.getLink();
-            if (url == null || url.isEmpty()) {
+            if (StringChecker.isNullOrEmpty(url)) {
                 System.out.println("Skipping episode (" + episode.getName() + ") with no link.");
                 episode = null;
                 continue;
+            }
+            File save = new File(path + File.separator
+                    + episode.getName() + ".mp4");
+            currentDownload = model.getDownloadForUrl(url);
+            if (currentDownload != null) {
+                if (currentDownload.isComplete()) {
+                    System.out.println("Skipping completed video: " + episode.getName());
+                    currentDownload.setDownloadPath(save.getAbsolutePath());
+                    currentDownload.setDownloading(false);
+                    currentDownload.setQueued(false);
+                    model.updateDownload(currentDownload);
+                    episode = null;
+                    continue;
+                } else {
+                    currentDownload.setQueued(true);
+                    currentDownload.updateProgress();
+                }
             }
             driver.get(url);
             int flag = -1;
@@ -73,17 +76,13 @@ public class VideoDownloader extends DriverBase implements Runnable {
                 flag = 0;
             } else if (driver.getPageSource().contains("cizgi-js-0")) {
                 flag = 1;
-            }
-            if (flag == -1) {
-                episode = null;
-                continue;
-            }
-            if (driver.getPageSource().contains("anime-js-0")) {
-                flag = 0;
-            } else if (driver.getPageSource().contains("cizgi-js-0")) {
-                flag = 1;
             } else if (driver.getPageSource().contains("video-js_html5_api")) {
                 flag = 2;
+            }
+            if (flag == -1) {
+                System.out.println("Skipping... Failed to find video component for: " + episode.getName());
+                episode = null;
+                continue;
             }
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
             try {
@@ -114,28 +113,39 @@ public class VideoDownloader extends DriverBase implements Runnable {
             try {
                 if (currentDownload == null) {
                     currentDownload = new Download(save.getAbsolutePath(), episode.getName(),
-                            Tools.getDateFormatted(), url, "0%");
+                            Tools.getDateFormatted(), url);
+                    currentDownload.setQueued(true);
+                    currentDownload.updateProgress();
                     model.addDownload(currentDownload);
-                } else {
-                    if (!episode.getName().equals(currentDownload.getName())) {
+                } else if (!episode.getName().equals(currentDownload.getName())) {
                         currentDownload = new Download(save.getAbsolutePath(), episode.getName(),
-                                Tools.getDateFormatted(), url, "0%");
+                                Tools.getDateFormatted(), url);
+                        currentDownload.setQueued(true);
+                        currentDownload.updateProgress();
                         model.addDownload(currentDownload);
-                    }
                 }
                 long originalFileSize = fileSize(new URL(videoLink));
-                if (save.exists() && save.length() >= originalFileSize) {
-                    System.out.println("Skipping completed video: " + episode.getName());
-                    currentDownload.setDownloadPath(save.getAbsolutePath());
-                    currentDownload.setProgressProperty("100%");
-                    currentDownload.setFileSize(originalFileSize);
-                    currentDownload.setDownloading(false);
-                    model.updateDownload(currentDownload);
-                    model.getTableView().refresh();
-                    episode = null;
+                if (originalFileSize <= -1) {
+                    System.out.println("Retrying... Error: Failed to determine file size for: " + episode.getName());
                     continue;
                 }
+                if (save.exists()) {
+                    if (save.length() >= originalFileSize) {
+                        System.out.println("Skipping completed video: " + episode.getName());
+                        currentDownload.setDownloadPath(save.getAbsolutePath());
+                        currentDownload.setFileSize(originalFileSize);
+                        currentDownload.setDownloading(false);
+                        currentDownload.setQueued(false);
+                        model.updateDownload(currentDownload);
+                        model.getTableView().refresh();
+                        episode = null;
+                        continue;
+                    }
+                } else {
+                    save.createNewFile();
+                }
                 System.out.println("Downloading: " + episode.getName());
+                currentDownload.setQueued(false);
                 currentDownload.setDownloading(true);
                 currentDownload.setSeriesLink(episode.getSeriesLink());
                 currentDownload.setFileSize(originalFileSize);
@@ -148,6 +158,9 @@ public class VideoDownloader extends DriverBase implements Runnable {
                     episode = null;
                 }
             } catch (IOException e) {
+                currentDownload.setQueued(true);
+                currentDownload.setDownloading(false);
+                model.updateDownload(currentDownload);
                 System.out.println("Unable to download " + episode
                         + "\nError: " + e.getLocalizedMessage()
                         + "\nReattempting...");
@@ -158,6 +171,8 @@ public class VideoDownloader extends DriverBase implements Runnable {
 
     private long fileSize(URL url) throws IOException {
         HttpsURLConnection con = (HttpsURLConnection) (url.openConnection());
+        con.setRequestMethod("HEAD");
+        con.setUseCaches(false);
         con.addRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
         con.addRequestProperty("Accept-Encoding", "gzip, deflate, br");
         con.addRequestProperty("Accept-Language", "en-US,en;q=0.9");
@@ -167,7 +182,6 @@ public class VideoDownloader extends DriverBase implements Runnable {
         con.addRequestProperty("Sec-Fetch-Site", "cross-site");
         con.addRequestProperty("Sec-Fetch-User", "?1");
         con.addRequestProperty("Upgrade-Insecure-Requests",  "1");
-        driver.manage().getCookies().forEach(cookie -> con.addRequestProperty("Cookie", cookie.toString()));
         con.addRequestProperty("User-Agent", userAgent);
         con.setConnectTimeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000);
         con.setReadTimeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000);
@@ -176,11 +190,7 @@ public class VideoDownloader extends DriverBase implements Runnable {
 
     private void downloadFile(URL url, File output) throws IOException {
         long offset = 0L;
-        if (!output.exists()) {
-            if (!output.createNewFile()) {
-                System.out.println("Unable to create file for: " + currentDownload.getName());
-            }
-        } else {
+        if (output.exists()) {
             offset = output.length();
         }
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
@@ -196,52 +206,42 @@ public class VideoDownloader extends DriverBase implements Runnable {
         con.setRequestProperty("Range", "bytes=" + offset + "-");
         con.setConnectTimeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000);
         con.setReadTimeout(model.settings().getInteger(Defaults.PROXYTIMEOUT) * 1000);
-        driver.manage().getCookies().forEach(cookie -> con.addRequestProperty("Cookie", cookie.toString()));
         con.addRequestProperty("User-Agent", userAgent);
         long completeFileSize = con.getContentLength() + offset; //TODO might timeout, check for that
         if (offset != 0) {
-            System.out.println("Detected incomplete video: " + episode.getName() + " Attempting to finish it.");
+            System.out.println("Detected incomplete video: " + episode.getName() + " - Attempting to finish it.");
         }
-        InputStream in = con.getInputStream();
+        byte[] buffer = new byte[2048];
+        BufferedInputStream bis = new BufferedInputStream(con.getInputStream());
         FileOutputStream fos = new FileOutputStream(output, true);
-        byte[] buffer = new byte[1024];
+        BufferedOutputStream bos = new BufferedOutputStream(fos, buffer.length);
         int count;
         long total = offset;
         final DownloadUpdater updater = new DownloadUpdater(model, currentDownload);
         ExecutorService service = Executors.newSingleThreadExecutor();
         service.submit(updater);
-        while ((count = in.read(buffer)) != -1) {
+        while ((count = bis.read(buffer, 0, 2048)) != -1) {
             if (!model.isRunning()) {
                 System.out.println("Stopping video download at " + total + "/" + completeFileSize + " - " + episode.getName());
                 break;
             }
             total += count;
-            updater.updateRatio(total / (double) completeFileSize);
-            fos.write(buffer, 0, count);
+            bos.write(buffer, 0, count);
         }
-        model.updateDownloadProgress(currentDownload, Tools.percentFormat.format(total / (double) completeFileSize));
         updater.setRunning(false);
         service.shutdown();
+        try {
+            if (!service.awaitTermination(15, TimeUnit.SECONDS)) {
+                service.shutdownNow();
+            }
+        } catch (InterruptedException ignored) {}
         currentDownload.setDownloading(false);
         model.updateDownload(currentDownload);
+        bos.flush();
+        bos.close();
         fos.close();
+        bis.close();
         con.disconnect();
-        in.close();
-    }
-
-    public static int readInputStreamWithTimeout(InputStream is, byte[] b, int timeoutMillis) throws IOException  {
-        int bufferOffset = 0;
-        long maxTimeMillis = System.currentTimeMillis() + timeoutMillis;
-        while (System.currentTimeMillis() < maxTimeMillis && bufferOffset < b.length) {
-            int readLength = Math.min(is.available(), b.length - bufferOffset);
-            // can alternatively use bufferedReader, guarded by isReady():
-            int readResult = is.read(b, bufferOffset, readLength);
-            if (readResult == -1) {
-                break;
-            }
-            bufferOffset += readResult;
-        }
-        return bufferOffset;
     }
 
     @SuppressWarnings("all")

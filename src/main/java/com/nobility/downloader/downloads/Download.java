@@ -14,95 +14,54 @@ public class Download {
     private String downloadPath;
     private final String name;
     private final String dateAdded;
-    @JsonIgnore
-    private final StringProperty nameProperty;
-    @JsonIgnore
-    private final StringProperty dateAddedProperty;
     private final String url;
-    private final String progress;
-    @JsonIgnore
-    private StringProperty progressProperty;
     private long fileSize;
-    private boolean downloading = false;
     private String seriesLink;
 
-    public Episode toEpisode() {
-        return new Episode(nameProperty.getValue(), url, seriesLink);
-    }
+    //used for the session, doesn't need to be saved.
+    @JsonIgnore
+    private boolean downloading = false;
+    @JsonIgnore
+    private boolean queued = false;
+    @JsonIgnore
+    private final StringProperty progress;
 
-    public Download(String downloadPath, String name, String dateAdded, String url, String progress) {
+    public Download(String downloadPath, String name, String dateAdded, String url) {
         this.downloadPath = downloadPath;
         this.name = name;
-        nameProperty = new SimpleStringProperty(this, "name");
-        setNameProperty(name);
         this.dateAdded = dateAdded;
-        dateAddedProperty = new SimpleStringProperty(this, "date");
-        setDateAddedProperty(dateAdded);
         this.url = url;
-        this.progress = progress;
-        progressProperty = new SimpleStringProperty(this, "progress");
+        progress = new SimpleStringProperty("0%");
     }
 
-    //progressProperty is not serializable, so we have to update it when the file is loaded
-    public void updateSerializedProgress() {
-        if (progressProperty == null) {
-            progressProperty = new SimpleStringProperty(this, "progress");
+    public void updateProgress() {
+        if (queued) {
+            setProgressValue("Queued");
+            return;
         }
         File video = new File(downloadPath);
         if (video.exists()) {
             double ratio = video.length() / (double) fileSize;
-            progressProperty.setValue(Tools.percentFormat.format(ratio));
-            //TODO on launch it seemed to have set the ratio to a negative long? only 1 episode
+            setProgressValue(Tools.percentFormat.format(ratio));
         } else {
-            progressProperty.setValue("Error");
+            setProgressValue("File Not Found");
         }
-        downloading = false;
+    }
+
+    private void setProgressValue(String value) {
+        if (!progress.getValue().equals(value)) {
+            progress.setValue(value);
+        }
     }
 
     public void update(Download download) {
-        progressProperty = download.progressProperty;
         fileSize = download.fileSize;
         downloading = download.downloading;
-    }
-
-    @JsonIgnore
-    public StringProperty getProgressProperty() {
-        return progressProperty;
-    }
-
-    @JsonIgnore
-    public void setProgressProperty(String progress) {
-        progressProperty.setValue(progress);
-    }
-
-    public void setNameProperty(String name) {
-        nameProperty.setValue(name);
-    }
-
-    public void setDateAddedProperty(String date) {
-        dateAddedProperty.setValue(date);
+        updateProgress();
     }
 
     public String getName() {
         return name;
-    }
-
-    @JsonIgnore
-    public StringProperty getNameProperty() {
-        return nameProperty;
-    }
-
-    public String getDateAdded() {
-        return dateAdded;
-    }
-
-    public String getProgress() {
-        return progress;
-    }
-
-    @JsonIgnore
-    public StringProperty getDateAddedProperty() {
-        return dateAddedProperty;
     }
 
     public String getDownloadPath() {
@@ -128,12 +87,12 @@ public class Download {
 
     @JsonIgnore
     public boolean isComplete() {
-        File file = getDownloadFile();
-        if (fileSize == 0 || Tools.bytesToMB(fileSize) <= 3.0) {
+        if (fileSize <= 0) {
             return false;
         }
+        File file = getDownloadFile();
         if (file != null) {
-            if (file.length() == 0) {
+            if (file.length() <= 0) {
                 return false;
             }
             return file.length() >= fileSize;
@@ -167,5 +126,25 @@ public class Download {
 
     public String getSeriesLink() {
         return seriesLink;
+    }
+
+    public String getDateAdded() {
+        return dateAdded;
+    }
+
+    public StringProperty getProgress() {
+        return progress;
+    }
+
+    public boolean isQueued() {
+        return queued;
+    }
+
+    public void setQueued(boolean queued) {
+        this.queued = queued;
+    }
+
+    public Episode toEpisode() {
+        return new Episode(name, url, seriesLink);
     }
 }

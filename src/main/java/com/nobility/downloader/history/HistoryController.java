@@ -3,11 +3,9 @@ package com.nobility.downloader.history;
 import com.nobility.downloader.Model;
 import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.Tools;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
@@ -72,7 +70,7 @@ public class HistoryController implements Initializable {
                     MenuItem downloadSeries = new MenuItem("Download Series");
                     downloadSeries.setOnAction(event -> {
                         if (model.isRunning()) {
-                            model.showError("You can't download a series while the checker is running.");
+                            model.showError("You can't download a series while the downloader is running.");
                             return;
                         }
                         model.getUrlTextField().setText(history.getSeriesLink());
@@ -99,21 +97,7 @@ public class HistoryController implements Initializable {
         });
         name_column.setCellValueFactory(new PropertyValueFactory<>("seriesName"));
         episodes_column.setCellValueFactory(new PropertyValueFactory<>("episodes"));
-        link_column.setCellValueFactory(row -> {
-            SeriesHistory history = row.getValue();
-            TextField field = new TextField();
-            int height = 22;
-            field.setPrefHeight(height);
-            field.setMaxHeight(height);
-            field.setMinHeight(height);
-            int width = (int) link_column.getWidth() - 10;
-            field.setPrefWidth(width);
-            field.setMaxWidth(width);
-            field.setMinWidth(width);
-            field.setAlignment(Pos.CENTER_LEFT);
-            field.setText(history.getSeriesLink());
-            return new SimpleObjectProperty<>(field);
-        });
+        link_column.setCellValueFactory(new PropertyValueFactory<>("seriesLink"));
         table.getItems().addAll(FXCollections.observableArrayList(model.getHistorySave().getSavedSeries()));
         table.sort();
         table.requestFocus();

@@ -5,11 +5,10 @@ import com.nobility.downloader.downloads.DownloadSave;
 import com.nobility.downloader.history.HistorySave;
 import com.nobility.downloader.scraper.BuddyHandler;
 import com.nobility.downloader.scraper.Episode;
+import com.nobility.downloader.series.SeriesDetails;
 import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.settings.JsonManager;
 import com.nobility.downloader.settings.Settings;
-import com.nobility.downloader.series.SeriesDetails;
-import com.nobility.downloader.series.SeriesDetailsController;
 import com.nobility.downloader.updates.ConfirmController;
 import com.nobility.downloader.updates.UpdateManager;
 import com.nobility.downloader.utils.StringChecker;
@@ -35,12 +34,10 @@ import javafx.stage.StageStyle;
 import org.openqa.selenium.WebDriver;
 
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,10 +46,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@SuppressWarnings("unused")
 public class Model {
 
     public static final String WEBSITE = "https://www.wcofun.com/";
+    public static final String GITHUB = "https://github.com/NobilityDeviant/Wcofun.com_Downloader";
     public static final String EXAMPLE_SERIES = WEBSITE + "anime/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level";
     public static final String EXAMPLE_SHOW = WEBSITE + "ive-been-killing-slimes-for-300-years-and-maxed-out-my-level-episode-1-english-dubbed";
     public static final boolean DEBUG_MODE = false;
@@ -63,7 +60,6 @@ public class Model {
     public static final String SETTINGS_ICON = IMAGE_PATH + "icon.png";
     public static final String MAIN_ICON = IMAGE_PATH + "icon.png";
 
-    private final BuddyHandler reader;
     private Stage mainStage;
     private Settings settings;
     private HistorySave historySave;
@@ -74,23 +70,23 @@ public class Model {
     private boolean clientUpdating = false;
     private volatile int linksFound;
     private volatile int downloadsFinishedForSession;
-    private final Desktop desktop = Desktop.getDesktop();
     private TableView<Download> tableView;
     private final List<WebDriver> runningDrivers = Collections.synchronizedList(new ArrayList<>());
     public List<SeriesDetails> details = Collections.synchronizedList(new ArrayList<>());
 
-    @FXML private TextField tf_sub_url;
-    @FXML private Button stopButton, startButton;
+    @FXML
+    private TextField tf_sub_url;
+    @FXML
+    private Button stopButton, startButton;
 
     public Model() {
-        reader = new BuddyHandler(this);
         downloadSave = JsonManager.loadDownloads();
         if (downloadSave == null) {
             downloadSave = new DownloadSave();
             saveDownloads();
         }
         for (int i = 0; i < downloadSave.getDownloads().size(); i++) {
-            downloadSave.getDownloads().get(i).updateSerializedProgress();
+            downloadSave.getDownloads().get(i).updateProgress();
         }
         saveDownloads();
         historySave = JsonManager.loadHistory();
@@ -107,15 +103,55 @@ public class Model {
         settings.checkForNewSettings();
         saveSettings();
         try {
-            userAgents = Files.readAllLines(new File("./resources/ua.txt").toPath());
+            userAgents = Files.readAllLines(new File("." + File.separator
+                    + "resources" + File.separator + "ua.txt").toPath());
+            System.out.println("Successfully loaded " + userAgents.size() + " user agents.");
         } catch (Exception e) {
-            System.out.println("Unable to load /resources/ua.txt (UserAgents) defaulting to one user agent.");
+            System.out.println("Unable to load /resources/ua.txt (UserAgents) attempting to download them.");
+            downloadUserAgents();
         }
         WebDriverManager.chromedriver().setup();
         if (settings.getBoolean(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
             System.setProperty("webdriver.chrome.silentOutput", "true");
             Logger.getLogger("org.openqa.selenium").setLevel(Level.OFF);
         }
+    }
+
+    private void downloadUserAgents() {
+        File resources = new File("." + File.separator + "resources" + File.separator);
+        if (!resources.exists()) {
+            if (!resources.mkdir()) {
+                System.out.println("Failed to find or create resources folder. Unable to download user agents.");
+                return;
+            }
+        }
+        new Thread(() -> {
+            byte[] buffer = new byte[2048];
+            try (BufferedInputStream in = new BufferedInputStream(new URL(
+                    "https://www.dropbox.com/s/42q46p69n4b84o7/ua.txt?dl=1"
+            ).openStream());
+                 FileOutputStream fileOutputStream = new FileOutputStream(
+                         resources.getAbsolutePath() + File.separator + "/ua.txt");
+                 BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream, buffer.length)
+            ) {
+                int bytesRead;
+                while ((bytesRead = in.read(buffer, 0, 2048)) != -1) {
+                    bos.write(buffer, 0, bytesRead);
+                }
+                System.out.println("Successfully downloaded user agents.");
+                try {
+                    userAgents = Files.readAllLines(new File("." + File.separator
+                            + "resources" + File.separator + "ua.txt").toPath());
+                    System.out.println("Successfully loaded " + userAgents.size() + " user agents.");
+                } catch (Exception e) {
+                    System.out.println("Failed to read download user agents file. Defaulting to one.");
+                }
+            } catch (IOException e) {
+                System.out.println("Failed to download user agents.");
+                System.out.println("Download them manually and place them in the resources folder.");
+                System.out.println("Download Link: https://www.dropbox.com/s/42q46p69n4b84o7/ua.txt?dl=1");
+            }
+        }).start();
     }
 
     private final Stage confirmStage = new Stage();
@@ -200,14 +236,8 @@ public class Model {
                 detailsStage.toFront();
                 detailsStage.setScene(scene);
                 detailsStage.sizeToScene();
-                SeriesDetailsController controller = loader.getController();
-                try {
-                    detailsStage.show();
-                } catch (Exception e) {
-                    showError("Error loading content from: " + link + " \n\nError: " + e.getLocalizedMessage());
-                }
+                detailsStage.show();
             } catch (IOException e) {
-                e.printStackTrace();
                 System.out.println("Validation Error: " + e.getMessage());
             }
         });
@@ -228,7 +258,7 @@ public class Model {
             downloadSave.getDownloads().add(download);
             tableView.sort();
             saveDownloads();
-            tableView.getItems().indexOf(download);
+            //tableView.getItems().indexOf(download);
         }
     }
 
@@ -242,12 +272,12 @@ public class Model {
         saveDownloads();
     }
 
-    public void updateDownloadProgress(Download download, String progress) {
+    public void updateDownloadProgress(Download download) {
         if (tableView == null) {
             return;
         }
-        tableView.getItems().get(indexForDownload(download, true)).setProgressProperty(progress);
-        downloadSave.getDownloads().get(indexForDownload(download, false)).setProgressProperty(progress);
+        tableView.getItems().get(indexForDownload(download, true)).updateProgress();
+        downloadSave.getDownloads().get(indexForDownload(download, false)).updateProgress();
         saveDownloads();
     }
 
@@ -265,15 +295,6 @@ public class Model {
         }
     }
 
-    public Download getDownloadForPath(String path) {
-        for (Download download : downloadSave.getDownloads()) {
-            if (download.getDownloadPath().equals(path)) {
-                return download;
-            }
-        }
-        return null;
-    }
-
     public Download getDownloadForUrl(String url) {
         for (Download download : downloadSave.getDownloads()) {
             if (download.getUrl().equals(url)) {
@@ -287,11 +308,62 @@ public class Model {
         if (running) {
             return;
         }
+        String url = tf_sub_url.getText();
+        if (StringChecker.isNullOrEmpty(url)) {
+            showError("You must input a series or show link first. \n\nExamples: \n\n"
+                    + "Series: " + Model.EXAMPLE_SERIES + "\n\n Episode: " + Model.EXAMPLE_SHOW);
+            return;
+        }
+        settings.setString(Defaults.LASTDOWNLOAD, url);
+        saveSettings();
+        if (settings.getInteger(Defaults.THREADS) < 1) {
+            showError("Your download threads must be higher than 0.");
+            return;
+        }
+        if (settings.getInteger(Defaults.THREADS) > 10) {
+            showError("Your download threads must be lower than 10.");
+            return;
+        }
+        if (settings.getInteger(Defaults.MAXLINKS) > 9999) {
+            showError("Your episodes can't be higher than 9999.");
+            return;
+        }
+        if (settings.getInteger(Defaults.MAXLINKS) < 0) {
+            showError("Your episodes can't be lower than 0.");
+            return;
+        }
         Platform.runLater(() -> {
             startButton.setDisable(true);
             stopButton.setDisable(false);
         });
         running = true;
+        links.clear();
+        linksFound = 0;
+        downloadsFinishedForSession = 0;
+        saveSettings();
+        new Thread(() -> {
+            BuddyHandler buddyHandler = new BuddyHandler(this);
+            try {
+                buddyHandler.update(url, false);
+            } catch (Exception e) {
+                try {
+                    System.err.println(e.getMessage());
+                    buddyHandler.update(url, true);
+                } catch (Exception e1) {
+                    Platform.runLater(() -> showError("Error reading episodes from this url. " + e1.getLocalizedMessage()));
+                    stop();
+                    return;
+                }
+            }
+            if (links.isEmpty()) {
+                Platform.runLater(() -> showError("Unable to find any episodes from this url."));
+                stop();
+                return;
+            }
+            settings.setString(Defaults.LASTDOWNLOAD, "");
+            saveSettings();
+            buddyHandler.launch();
+        }).start();
     }
 
     public void stop() {
@@ -369,7 +441,7 @@ public class Model {
             return;
         }
         try {
-            desktop.open(file);
+            Desktop.getDesktop().open(file);
         } catch (IOException e) {
             showError("Unable to open folder.", e);
         }
@@ -391,7 +463,6 @@ public class Model {
             saveSettings();
             saveSeriesHistory();
             saveDownloads();
-            System.err.println("forced shutdown");
             System.exit(-1);
             return;
         }
@@ -402,8 +473,11 @@ public class Model {
                 if (!runningDrivers.isEmpty()) {
                     for (WebDriver driver : runningDrivers) {
                         if (driver != null) {
-                            driver.close();
-                            driver.quit();
+                            try {
+                                driver.close();
+                                driver.quit();
+                            } catch (Exception ignored) {
+                            }
                         }
                     }
                 }
@@ -417,8 +491,11 @@ public class Model {
             if (!runningDrivers.isEmpty()) {
                 for (WebDriver driver : runningDrivers) {
                     if (driver != null) {
-                        driver.close();
-                        driver.quit();
+                        try {
+                            driver.close();
+                            driver.quit();
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -461,18 +538,7 @@ public class Model {
     }
 
     public void showError(String content) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.getDialogPane().getStylesheets().add(String.valueOf(Main.class.getResource(DIALOG_PATH)));
-        alert.getDialogPane().getStyleClass().add("dialog");
-        Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
-        InputStream icon = Main.class.getResourceAsStream(MAIN_ICON);
-        if (icon != null) {
-            stage.getIcons().add(new Image(icon));
-        }
-        alert.setHeaderText("");
-        alert.setContentText(content);
-        alert.showAndWait();
+        showError("Error", content);
     }
 
     public void showError(String content, Exception e) {
@@ -596,10 +662,6 @@ public class Model {
         return downloadsFinishedForSession;
     }
 
-    public void setDownloadsFinishedForSession(int downloadsFinishedForSession) {
-        this.downloadsFinishedForSession = downloadsFinishedForSession;
-    }
-
     public synchronized void incrementDownloadsFinished() {
         downloadsFinishedForSession++;
     }
@@ -612,10 +674,6 @@ public class Model {
 
     public List<WebDriver> getRunningDrivers() {
         return runningDrivers;
-    }
-
-    public Desktop getDesktop() {
-        return desktop;
     }
 
     public TableView<Download> getTableView() {
@@ -632,10 +690,6 @@ public class Model {
 
     public DownloadSave getDownloadSave() {
         return downloadSave;
-    }
-
-    public BuddyHandler getReader() {
-        return reader;
     }
 
     public void setMainStage(Stage mainStage) {
@@ -659,13 +713,8 @@ public class Model {
         return links;
     }
 
-
     public synchronized void incrementLinksFound() {
         linksFound++;
-    }
-
-    public void setLinksFound(int linksFound) {
-        this.linksFound = linksFound;
     }
 
     public int getLinksFound() {
@@ -679,4 +728,5 @@ public class Model {
     public void setStopButton(Button stopButton) {
         this.stopButton = stopButton;
     }
+
 }

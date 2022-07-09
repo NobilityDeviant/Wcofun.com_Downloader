@@ -15,26 +15,28 @@ public abstract class DriverBase {
     private final ChromeOptions options = new ChromeOptions();
     protected WebDriver driver = null;
     private boolean isSetup = false;
+    protected String userAgent;
 
     protected DriverBase(Model model) {
         this.model = model;
         setupDriver();
     }
 
-    protected void setupDriver() {
+    private void setupDriver() {
         if (isSetup) {
             return;
         }
+        userAgent = model.getRandomUserAgent();
         options.setHeadless(true);
         options.setPageLoadStrategy(PageLoadStrategy.EAGER);
-        options.addArguments("--no-sandbox"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-infobars"); //https://stackoverflow.com/a/43840128/1689770
-        options.addArguments("--disable-dev-shm-usage"); //https://stackoverflow.com/a/50725918/1689770
-        options.addArguments("--disable-browser-side-navigation"); //https://stackoverflow.com/a/49123152/1689770
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-infobars");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--disable-browser-side-navigation");
         options.addArguments("--disable-gpu");
         options.addArguments("enable-automation");
         options.addArguments("--mute-audio");
-        options.addArguments("user-agent=" + model.getRandomUserAgent());
+        options.addArguments("user-agent=" + userAgent);
         if (!StringChecker.isNullOrEmpty(model.settings().getString(Defaults.PROXY))) {
             options.addArguments("--proxy-server=" + model.settings().getString(Defaults.PROXY));
         }
@@ -58,6 +60,4 @@ public abstract class DriverBase {
             }
         } catch (Exception ignored) {}
     }
-
-
 }

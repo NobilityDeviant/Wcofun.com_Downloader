@@ -14,9 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
+import java.io.*
 import java.net.URL
 import java.util.*
 import javax.net.ssl.HttpsURLConnection
@@ -143,8 +141,9 @@ class ConfirmController(private val model: Model) : Initializable {
         ioScope.launch {
             val downloadedClient = File(System.getProperty("user.home") + "/TWCD.jar")
             var con: HttpsURLConnection? = null
-            var inputStream: InputStream? = null
+            var inputStream: BufferedInputStream? = null
             var fos: FileOutputStream? = null
+            var bos: BufferedOutputStream? = null
             try {
                 model.isClientUpdating = true
                 if (downloadedClient.exists()) {
@@ -166,17 +165,18 @@ class ConfirmController(private val model: Model) : Initializable {
                 con.addRequestProperty("User-Agent", model.randomUserAgent)
                 con.connectTimeout = 30000
                 con.readTimeout = 30000
-                inputStream = con.inputStream
+                inputStream = BufferedInputStream(con.inputStream)
                 val completeFileSize = con.contentLengthLong
                 uiScope.launch {
                     downloadProgressLabel.text = "0/" + Tools
                         .bytesToString(completeFileSize)
                 }
+                val buffer = ByteArray(2048)
                 fos = FileOutputStream(downloadedClient, true)
-                val buffer = ByteArray(1024)
+                bos = BufferedOutputStream(fos, buffer.size)
                 var count: Int
                 var total = 0L
-                while (inputStream.read(buffer).also { count = it } != -1) {
+                while (inputStream.read(buffer, 0, 2048).also { count = it } != -1) {
                     if (canceled) {
                         throw Exception("Canceled download process.")
                     }
@@ -187,7 +187,7 @@ class ConfirmController(private val model: Model) : Initializable {
                             .bytesToString(completeFileSize)
                         downloadProgressBar.progress = finalTotal / completeFileSize.toDouble()
                     }
-                    fos.write(buffer, 0, count)
+                    bos.write(buffer, 0, count)
                 }
                 model.isClientUpdating = false
                 System.err.println(
@@ -218,6 +218,7 @@ class ConfirmController(private val model: Model) : Initializable {
                 }
                 return@launch
             } finally {
+                bos?.close()
                 fos?.close()
                 con?.disconnect()
                 inputStream?.close()

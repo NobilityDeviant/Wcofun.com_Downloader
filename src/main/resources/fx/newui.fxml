@@ -39,6 +39,7 @@
                   <MenuItem fx:id="about" mnemonicParsing="false" onAction="#handleClicks" text="About" />
                   <MenuItem fx:id="updates" mnemonicParsing="false" onAction="#handleClicks" text="Check For Updates" />
                   <MenuItem fx:id="open_website" mnemonicParsing="false" onAction="#handleClicks" text="Open Video Website" />
+                  <MenuItem fx:id="open_github" mnemonicParsing="false" onAction="#handleClicks" text="Open Project Github" />
                </items>
             </Menu>
          </menus>

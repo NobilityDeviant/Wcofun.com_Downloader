@@ -16,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 
 public class UpdateManager {
 
@@ -25,13 +26,14 @@ public class UpdateManager {
         this.model = model;
     }
 
-    public static final String CURRENT_VERSION = "1.4.1";
+    public static final String CURRENT_VERSION = "1.4.9";
     public static final String RELEASES_LINK = "https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases";
     protected final String githubLatest = "https://api.github.com/repos/NobilityDeviant/Wcofun.com_Downloader/releases/latest";
     public Update latestUpdate = null;
 
     private JsonObject apiSheet() {
         try {
+            removeValidation();
             HttpsURLConnection urlConnection = (HttpsURLConnection) new URL(githubLatest).openConnection();
             urlConnection.setReadTimeout(20_000);
             urlConnection.setConnectTimeout(20_000);
@@ -46,6 +48,7 @@ public class UpdateManager {
             }
             in.close();
             urlConnection.disconnect();
+            //return new JsonParser().parse(stringBuilder.toString()).getAsJsonObject();
             return JsonParser.parseString(stringBuilder.toString()).getAsJsonObject();
         } catch (Exception e) {
             System.out.println("Failed to get github api response. Error: " + e.getLocalizedMessage());
@@ -138,15 +141,14 @@ public class UpdateManager {
         }).start();
     }
 
-    @SuppressWarnings("unused")
     private void removeValidation() {
         TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager(){
-            public java.security.cert.X509Certificate[] getAcceptedIssuers(){return null;}
+            public X509Certificate[] getAcceptedIssuers(){return null;}
             @Override
-            public void checkClientTrusted(java.security.cert.X509Certificate[] arg0, String arg1) {
+            public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
             }
             @Override
-            public void checkServerTrusted(java.security.cert.X509Certificate[] arg0, String arg1) {
+            public void checkServerTrusted(X509Certificate[] arg0, String arg1) {
             }
         }};
         try {

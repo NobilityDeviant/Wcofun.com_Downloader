@@ -48,10 +48,12 @@ public class ChromeDriverLinkScraper extends DriverBase implements Runnable {
                 if (!titleElement.isEmpty()) {
                     title = titleElement.get(0).text();
                 }
+                //todo save all links in history
                 model.getHistorySave().addSeries(new SeriesHistory(url, title,
                         elements.size(), Tools.getDateFormatted()), false);
                 model.saveSeriesHistory();
             } else {
+                //todo save series even if it's just an episode
                 Elements catgeory = doc.getElementsByClass("header-tag");
                 String seriesLink = "";
                 if (!catgeory.isEmpty()) {

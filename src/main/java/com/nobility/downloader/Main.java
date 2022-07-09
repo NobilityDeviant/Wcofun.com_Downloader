@@ -18,7 +18,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         Model model = new Model();
-        FXMLLoader loader = new FXMLLoader(Main.class.getResource(Model.FX_PATH + "newui.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(Model.FX_PATH + "newui.fxml"));
         loader.setControllerFactory((Class<?> controllerType) -> {
             try {
                 for (Constructor<?> con : controllerType.getConstructors()) {
@@ -30,6 +30,7 @@ public class Main extends Application {
             } catch (Exception e) {
                 System.err.println("Failed to load MainController. Error: " + e.getMessage());
                 e.printStackTrace(System.err);
+                System.exit(-2);
                 return null;
             }
         });
