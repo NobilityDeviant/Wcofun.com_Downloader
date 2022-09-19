@@ -1,6 +1,6 @@
 # Wcofun.com Downloader
 
-Used to download videos and series from https://www.wcofun.com/
+Used to download videos and series from https://www.wcofun.net/
 
 Coded in JDK 8.
 
@@ -24,7 +24,7 @@ I manually downloaded so many videos from wco that I decided to create this bad 
 
 This downloader is multi-threaded, customizable, resizeable, fast and easy to use!
 
-You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.com/anime/to-love-ru
+You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
 
 # Downloads
@@ -47,9 +47,6 @@ Enjoy and have fun!
 
 Known Issue: This program does not support downloading 2 videos from one page.
 Idk why this website has them, but it's best to ignore them for now.
-
-I will fix the updater if i decide to update it in the future.
-For now just check back every now and then!
 
 # Donate
 

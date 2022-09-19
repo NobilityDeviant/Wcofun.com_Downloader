@@ -1,0 +1,28 @@
+* {
+    primary: #5b65a3;
+    second: #7380d1;
+    third: #8d9bf0;
+    border: #979dc9;
+    text-color: white;
+}
+
+
+.check-box {
+    -fx-padding: 5px;
+    -fx-border-insets: 5px;
+    -fx-background-insets: 5px;
+}
+
+.check-box .box {
+    -fx-background-color: primary;
+    -fx-border-color:third;
+    -fx-border-radius:3px;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+.check-box:selected .box {
+    -fx-background-color: second;
+}

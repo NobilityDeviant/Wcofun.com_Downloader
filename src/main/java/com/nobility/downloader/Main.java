@@ -13,12 +13,10 @@ import java.lang.reflect.Constructor;
 
 public class Main extends Application {
 
-    private double x, y;
-
     @Override
     public void start(Stage primaryStage) throws Exception {
         Model model = new Model();
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(Model.FX_PATH + "newui.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(Model.FX_PATH + "ui.fxml"));
         loader.setControllerFactory((Class<?> controllerType) -> {
             try {
                 for (Constructor<?> con : controllerType.getConstructors()) {
@@ -47,16 +45,6 @@ public class Main extends Application {
             primaryStage.getIcons().add(new Image(icon));
         }
         primaryStage.centerOnScreen();
-        //primaryStage.sizeToScene();
-
-        root.setOnMousePressed(event -> {
-            x = event.getSceneX();
-            y = event.getSceneY();
-        });
-        root.setOnMouseDragged(event -> {
-            primaryStage.setX(event.getScreenX() - x);
-            primaryStage.setY(event.getScreenY() - y);
-        });
         primaryStage.setOnCloseRequest(event -> model.shutdown(false));
         primaryStage.show();
     }

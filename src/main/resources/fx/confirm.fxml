@@ -9,11 +9,11 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane prefHeight="398.0" prefWidth="712.0" style="-fx-background-color: #5b65a3;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.updates.ConfirmController">
+<BorderPane prefHeight="398.0" prefWidth="712.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.updates.ConfirmController">
    <center>
       <TextArea fx:id="updateLog" cacheShape="false" centerShape="false" editable="false" focusTraversable="false" nodeOrientation="LEFT_TO_RIGHT" pickOnBounds="false" prefHeight="302.0" prefWidth="635.0" scaleShape="false" snapToPixel="false" stylesheets="@../css/textarea.css" wrapText="true" BorderPane.alignment="CENTER">
          <BorderPane.margin>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+            <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
          </BorderPane.margin></TextArea>
    </center>
    <bottom>
@@ -38,12 +38,12 @@
                <children>
                   <Button fx:id="btnUpdate" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#update" prefHeight="45.0" prefWidth="119.0" stylesheets="@../css/button.css" text="Update" textAlignment="CENTER" HBox.hgrow="ALWAYS">
                      <HBox.margin>
-                        <Insets right="5.0" top="5.0" />
+                        <Insets bottom="5.0" right="5.0" top="5.0" />
                      </HBox.margin>
                   </Button>
                   <Button fx:id="btnCancel" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#cancel" prefHeight="45.0" prefWidth="119.0" stylesheets="@../css/button.css" text="Shutdown" textAlignment="CENTER" HBox.hgrow="ALWAYS">
                      <HBox.margin>
-                        <Insets top="5.0" />
+                        <Insets bottom="5.0" top="5.0" />
                      </HBox.margin>
                   </Button>
                </children>

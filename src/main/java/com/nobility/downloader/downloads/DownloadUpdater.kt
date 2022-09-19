@@ -1,31 +1,20 @@
-package com.nobility.downloader.downloads;
+package com.nobility.downloader.downloads
 
-import com.nobility.downloader.Model;
+import com.nobility.downloader.Model
+import kotlinx.coroutines.delay
 
-public class DownloadUpdater implements Runnable {
+class DownloadUpdater(private val model: Model, private val download: Download) {
 
-    private final Model model;
-    private final Download download;
-    private boolean running = true;
+    private var running = true
 
-    public DownloadUpdater(final Model model, final Download download) {
-        this.model = model;
-        this.download = download;
-    }
-
-    @Override
-    public void run() {
+    suspend fun run() {
         while (running) {
-            model.updateDownloadProgress(download);
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            model.updateDownloadProgress(download)
+            delay(500)
         }
     }
 
-    public void setRunning(boolean running) {
-        this.running = running;
+    fun setRunning(running: Boolean) {
+        this.running = running
     }
 }

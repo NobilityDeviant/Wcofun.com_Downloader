@@ -1,8 +1,10 @@
 package com.nobility.downloader.history;
 
 import com.nobility.downloader.Model;
+import com.nobility.downloader.cache.Series;
 import com.nobility.downloader.settings.Defaults;
 import com.nobility.downloader.utils.Tools;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -18,11 +20,11 @@ import java.util.ResourceBundle;
 
 public class HistoryController implements Initializable {
 
-    @FXML private TableView<SeriesHistory> table;
-    @FXML private TableColumn<SeriesHistory, String> name_column;
-    @FXML private TableColumn<SeriesHistory, TextField> link_column;
-    @FXML private TableColumn<SeriesHistory, Integer> episodes_column;
-    @FXML private TableColumn<SeriesHistory, String> date_column;
+    @FXML private TableView<Series> table;
+    @FXML private TableColumn<Series, String> name_column;
+    @FXML private TableColumn<Series, TextField> link_column;
+    @FXML private TableColumn<Series, String> episodes_column;
+    @FXML private TableColumn<Series, String> date_column;
     private final Model model;
     private final Stage stage;
 
@@ -56,35 +58,53 @@ public class HistoryController implements Initializable {
         };
         date_column.setComparator(dateComparator);
         table.setRowFactory(callback -> {
-            TableRow<SeriesHistory> row = new TableRow<>();
+            TableRow<Series> row = new TableRow<>();
             ContextMenu menu = new ContextMenu();
             row.emptyProperty().addListener((observable, oldValue, isEmpty) -> {
                 if (!isEmpty) {
-                    SeriesHistory history = row.getItem();
+                    Series history = row.getItem();
                     MenuItem seriesDetails = new MenuItem("Series Details");
-                    seriesDetails.setOnAction(event -> model.openVideoDetails(history.getSeriesLink()));
+                    seriesDetails.setOnAction(event -> model.openSeriesDetails(history.getLink()));
                     MenuItem openLink = new MenuItem("Open Series Link");
-                    openLink.setOnAction(event -> model.showLinkPrompt(history.getSeriesLink(), true));
+                    openLink.setOnAction(event -> model.showLinkPrompt(history.getLink(), true));
                     MenuItem copyLink = new MenuItem("Copy Series Link");
-                    copyLink.setOnAction(event -> model.showCopyPrompt(history.getSeriesLink(), false));
+                    copyLink.setOnAction(event -> model.showCopyPrompt(history.getLink(), false, stage));
                     MenuItem downloadSeries = new MenuItem("Download Series");
                     downloadSeries.setOnAction(event -> {
                         if (model.isRunning()) {
                             model.showError("You can't download a series while the downloader is running.");
                             return;
                         }
-                        model.getUrlTextField().setText(history.getSeriesLink());
+                        model.getUrlTextField().setText(history.getLink());
                         model.start();
-                        model.showMessage("Started download", "Launched video downloader for: " + history.getSeriesLink());
+                        model.showMessage("Started downloader", "Launched video downloader for: " + history.getLink());
+                    });
+                    MenuItem checkForNewEpisodes = new MenuItem("Check For New Episodes");
+                    checkForNewEpisodes.setOnAction(event -> {
+                        if (model.isRunning()) {
+                            model.showError("You can't check for new episodes while the downloader is running.");
+                            return;
+                        }
+                        model.downloadNewEpisodesForSeries(history);
+                        model.showMessage(
+                                "Checking for new episodes",
+                                "Launched the video scraper to download new episodes for " + history.getName()
+                        );
                     });
                     MenuItem removeFromList = new MenuItem("Remove From List");
                     removeFromList.setOnAction(event -> {
-                        model.getHistorySave().removeSeries(history);
+                        model.history().removeSeries(history);
                         table.getItems().remove(history);
                         table.sort();
                         model.saveSeriesHistory();
                     });
-                    menu.getItems().addAll(seriesDetails, openLink, copyLink, downloadSeries, removeFromList);
+                    menu.getItems().addAll(
+                            seriesDetails,
+                            openLink, copyLink,
+                            downloadSeries,
+                            checkForNewEpisodes,
+                            removeFromList
+                    );
                     row.setContextMenu(menu);
                     row.setOnMouseClicked(event -> {
                         if (model.settings().getBoolean(Defaults.SHOWCONTEXTONCLICK)) {
@@ -95,10 +115,13 @@ public class HistoryController implements Initializable {
             });
             return row;
         });
-        name_column.setCellValueFactory(new PropertyValueFactory<>("seriesName"));
-        episodes_column.setCellValueFactory(new PropertyValueFactory<>("episodes"));
-        link_column.setCellValueFactory(new PropertyValueFactory<>("seriesLink"));
-        table.getItems().addAll(FXCollections.observableArrayList(model.getHistorySave().getSavedSeries()));
+        name_column.setCellValueFactory(new PropertyValueFactory<>("name"));
+        //might need int
+        episodes_column.setCellValueFactory(row -> new SimpleStringProperty(
+                String.valueOf(row.getValue().getEpisodes().size())
+        ));
+        link_column.setCellValueFactory(new PropertyValueFactory<>("link"));
+        table.getItems().addAll(FXCollections.observableArrayList(model.history().getSavedSeries()));
         table.sort();
         table.requestFocus();
     }

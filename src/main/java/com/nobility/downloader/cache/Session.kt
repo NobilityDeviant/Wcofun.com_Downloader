@@ -1,4 +1,4 @@
-package com.nobility.downloader.scraper
+package com.nobility.downloader.cache
 
 import com.nobility.downloader.DriverBase
 import com.nobility.downloader.Model

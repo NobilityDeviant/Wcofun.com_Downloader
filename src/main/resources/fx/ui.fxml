@@ -25,21 +25,21 @@
          <menus>
             <Menu mnemonicParsing="false" text="File">
                <items>
-                  <MenuItem fx:id="open_download_folder" mnemonicParsing="false" onAction="#handleClicks" text="Open Download Folder" />
-                  <MenuItem fx:id="open_download_history" mnemonicParsing="false" onAction="#handleClicks" text="Show Series Download History" />
+                  <MenuItem fx:id="openDownloadFolder" mnemonicParsing="false" onAction="#handleClicks" text="Open Download Folder" />
+                  <MenuItem fx:id="openDownloadHistory" mnemonicParsing="false" onAction="#handleClicks" text="Show Series Download History" />
                </items>
             </Menu>
             <Menu mnemonicParsing="false" text="Settings">
                <items>
-                  <MenuItem fx:id="open_settings" mnemonicParsing="false" onAction="#handleClicks" text="Open Settings" />
+                  <MenuItem fx:id="openSettings" mnemonicParsing="false" onAction="#handleClicks" text="Open Settings" />
                </items>
             </Menu>
             <Menu mnemonicParsing="false" text="Help">
                <items>
                   <MenuItem fx:id="about" mnemonicParsing="false" onAction="#handleClicks" text="About" />
                   <MenuItem fx:id="updates" mnemonicParsing="false" onAction="#handleClicks" text="Check For Updates" />
-                  <MenuItem fx:id="open_website" mnemonicParsing="false" onAction="#handleClicks" text="Open Video Website" />
-                  <MenuItem fx:id="open_github" mnemonicParsing="false" onAction="#handleClicks" text="Open Project Github" />
+                  <MenuItem fx:id="openWebsite" mnemonicParsing="false" onAction="#handleClicks" text="Open Video Website" />
+                  <MenuItem fx:id="openGithub" mnemonicParsing="false" onAction="#handleClicks" text="Open Project Github" />
                </items>
             </Menu>
          </menus>
@@ -50,7 +50,7 @@
          <tabs>
             <Tab text="Downloader">
                <content>
-                  <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #5b65a3;">
+                  <BorderPane prefHeight="200.0" prefWidth="200.0">
                      <top>
                         <VBox alignment="CENTER" prefHeight="27.0" prefWidth="1049.0" BorderPane.alignment="CENTER">
                            <children>
@@ -59,23 +59,45 @@
                                     <Insets bottom="10.0" top="10.0" />
                                  </VBox.margin>
                               </Label>
-                              <TextField fx:id="tf_sub_url" VBox.vgrow="ALWAYS">
+                              <TextField fx:id="urlSubmission" stylesheets="@../css/textfield.css" VBox.vgrow="ALWAYS">
                                  <VBox.margin>
                                     <Insets left="10.0" right="10.0" />
                                  </VBox.margin>
                               </TextField>
+                              <HBox alignment="CENTER" fillHeight="false">
+                                 <children>
+                                    <Button alignment="CENTER" contentDisplay="CENTER" minHeight="40.0" mnemonicParsing="false" onAction="#clearURL" prefHeight="40.0" prefWidth="120.0" stylesheets="@../css/button.css" text="Clear URL" textAlignment="CENTER">
+                                       <HBox.margin>
+                                          <Insets right="2.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                    <Button alignment="CENTER" contentDisplay="CENTER" layoutX="475.0" layoutY="17.0" minHeight="40.0" mnemonicParsing="false" onAction="#pasteURL" prefHeight="40.0" prefWidth="120.0" stylesheets="@../css/button.css" text="Paste URL" textAlignment="CENTER">
+                                       <HBox.margin>
+                                          <Insets left="2.0" right="2.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                    <Button alignment="CENTER" contentDisplay="CENTER" layoutX="537.0" layoutY="10.0" minHeight="40.0" mnemonicParsing="false" onAction="#pasteURLAndStart" prefHeight="40.0" stylesheets="@../css/button.css" text="Paste URL &amp; Start" textAlignment="CENTER">
+                                       <HBox.margin>
+                                          <Insets left="2.0" />
+                                       </HBox.margin>
+                                    </Button>
+                                 </children>
+                                 <VBox.margin>
+                                    <Insets bottom="3.0" top="10.0" />
+                                 </VBox.margin>
+                              </HBox>
                            </children>
                         </VBox>
                      </top>
                      <bottom>
                         <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                            <children>
-                              <Button fx:id="start_button" mnemonicParsing="false" onAction="#start" prefHeight="69.0" prefWidth="152.0" stylesheets="@../css/button.css" text="Start" HBox.hgrow="ALWAYS">
+                              <Button fx:id="startButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#start" prefHeight="69.0" prefWidth="152.0" stylesheets="@../css/button.css" text="Start" textAlignment="CENTER" HBox.hgrow="ALWAYS">
                                  <HBox.margin>
                                     <Insets right="5.0" />
                                  </HBox.margin>
                               </Button>
-                              <Button fx:id="stop_button" mnemonicParsing="false" onAction="#stop" prefHeight="69.0" prefWidth="152.0" stylesheets="@../css/button.css" text="Stop" HBox.hgrow="ALWAYS">
+                              <Button fx:id="stopButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#stop" prefHeight="69.0" prefWidth="152.0" stylesheets="@../css/button.css" text="Stop" textAlignment="CENTER" HBox.hgrow="ALWAYS">
                                  <HBox.margin>
                                     <Insets left="5.0" />
                                  </HBox.margin>
@@ -88,9 +110,9 @@
                            <children>
                               <HBox alignment="BOTTOM_RIGHT" fillHeight="false">
                                  <children>
-                                    <Button fx:id="clearConsole" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#clearConsole" stylesheets="@../css/button.css" text="Clear Console" textAlignment="CENTER" HBox.hgrow="ALWAYS">
+                                    <Button alignment="CENTER" contentDisplay="CENTER" minHeight="40.0" mnemonicParsing="false" onAction="#clearConsole" prefHeight="40.0" prefWidth="120.0" stylesheets="@../css/button.css" text="Clear Console" textAlignment="CENTER">
                                        <HBox.margin>
-                                          <Insets right="5.0" />
+                                          <Insets bottom="5.0" right="5.0" />
                                        </HBox.margin>
                                     </Button>
                                  </children>
@@ -98,7 +120,7 @@
                                     <Insets />
                                  </VBox.margin>
                               </HBox>
-                              <TextArea fx:id="print" editable="false" prefHeight="540.0" prefWidth="1049.0" VBox.vgrow="ALWAYS">
+                              <TextArea fx:id="console" editable="false" prefHeight="540.0" prefWidth="1049.0" stylesheets="@../css/textarea.css" VBox.vgrow="ALWAYS">
                                  <VBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </VBox.margin>
@@ -122,12 +144,12 @@
                         <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                      </rowConstraints>
                      <children>
-                        <TableView fx:id="download_table" prefHeight="394.0" prefWidth="772.0" stylesheets="@../css/tableview.css" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS">
+                        <TableView fx:id="downloadTable" prefHeight="394.0" prefWidth="772.0" stylesheets="@../css/tableview.css" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS">
                            <columns>
-                              <TableColumn fx:id="name_column" minWidth="30.0" prefWidth="560.0" text="Name" />
-                              <TableColumn fx:id="date_column" minWidth="30.0" prefWidth="172.0" text="Date Added" />
-                              <TableColumn fx:id="size_column" minWidth="30.0" prefWidth="120.0" text="File Size (MB)" />
-                              <TableColumn fx:id="progress_column" minWidth="54.0" prefWidth="97.0" text="Progress" />
+                              <TableColumn fx:id="nameColumn" minWidth="30.0" prefWidth="560.0" text="Name" />
+                              <TableColumn fx:id="dateColumn" minWidth="30.0" prefWidth="172.0" text="Date Added" />
+                              <TableColumn fx:id="sizeColumn" minWidth="30.0" prefWidth="120.0" text="File Size (MB)" />
+                              <TableColumn fx:id="progressColumn" minWidth="54.0" prefWidth="97.0" text="Progress" />
                            </columns>
                            <columnResizePolicy>
                               <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

@@ -63,18 +63,18 @@ class ConfirmController(private val model: Model) : Initializable {
         this.stage = stage
         this.required = required
         this.upToDate = upToDate
-        if (!required) {
-            btnCancel.text = "Cancel"
-        }
-        updateLog.text = model.updateManager.latestUpdate.updateDescription
-        if (upToDate) {
-            btnUpdate.text = "Updated"
-            btnUpdate.isDisable = true
-        }
         stage.setOnCloseRequest {
             run {
                 cancel()
             }
+        }
+        if (!required) {
+            btnCancel.text = "Cancel"
+        }
+        updateLog.text = model.updateManager.latestUpdate?.updateDescription ?: "No description found."
+        if (upToDate) {
+            btnUpdate.text = "Updated"
+            btnUpdate.isDisable = true
         }
     }
 
@@ -87,7 +87,9 @@ class ConfirmController(private val model: Model) : Initializable {
         downloadProgressBar.isVisible = true
         btnUpdate.text = "Updating"
         btnUpdate.isDisable = true
-        downloadLink.text = "Downloading: ${model.updateManager.latestUpdate.downloadLink}"
+        downloadLink.text = "Downloading: ${
+            model.updateManager.latestUpdate?.downloadLink ?: "No download link found."
+        }"
         updateClientAndLaunch(required)
     }
 
@@ -150,9 +152,10 @@ class ConfirmController(private val model: Model) : Initializable {
                     downloadedClient.delete()
                 }
                 downloadProgressBar.progress = 0.0
-                con = URL(model.updateManager.latestUpdate.downloadLink).openConnection() as HttpsURLConnection
+                con = URL(model.updateManager.latestUpdate!!.downloadLink).openConnection() as HttpsURLConnection
                 con.addRequestProperty(
-                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+                    "Accept",
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
                 )
                 con.addRequestProperty("Accept-Encoding", "gzip, deflate, br")
                 con.addRequestProperty("Accept-Language", "en-US,en;q=0.9")

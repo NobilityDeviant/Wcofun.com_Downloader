@@ -1,20 +1,16 @@
 package com.nobility.downloader.scraper
 
 import com.nobility.downloader.Model
+import com.nobility.downloader.cache.Episode
+import com.nobility.downloader.cache.Series
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.utils.AlertBox
-import javafx.scene.control.Alert
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
+import com.nobility.downloader.utils.Resource
+import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
-import kotlinx.coroutines.launch
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 /**
  * Used to handle the start of the download and episode scraping process
@@ -24,29 +20,73 @@ class BuddyHandler(private val model: Model) {
 
     var url: String? = null
     private val taskScope = CoroutineScope(Dispatchers.Default)
-    private val uiScope = CoroutineScope(Dispatchers.JavaFx)
 
-    @Throws(Exception::class)
-    fun update(url: String, chrome: Boolean) {
+    suspend fun update(url: String) {
         this.url = url
-        val service = Executors.newSingleThreadExecutor()
-        service.submit(if (chrome) ChromeDriverLinkScraper(model, url) else JSoupLinkScraper(model, url))
-        service.shutdown()
-        if (service.awaitTermination(2, TimeUnit.MINUTES)) {
-            if (model.links.isNotEmpty()) {
-                println("Launching downloader for " + url + " Episodes: " + model.links.size)
-            } else {
-                if (!chrome) {
-                    throw Exception("Failed to use Jsoup. Using Chrome Driver instead.")
+        val scraper = LinkScraper(model)
+        val result = scraper.handleLink(url)
+        if (result.data != null) {
+            when (result.data) {
+                is Series -> {
+                    val added = model.history().addSeries(result.data, true)
+                    if (added) {
+                        model.saveSeriesHistory()
+                    }
+                    model.episodes.addAll(result.data.episodes)
+                    println("Downloading series from: $url \nFound Episodes: ${result.data.episodes.size}")
+                }
+
+                is Episode -> {
+                    model.episodes.add(result.data)
+                    println("Downloading episode from: $url")
+                }
+
+                else -> {
+                    throw Exception("Downloading failed. Don't lose hope. Please try again.")
                 }
             }
+        } else if (!result.message.isNullOrEmpty()) {
+            throw Exception(result.message)
         }
     }
 
+    suspend fun checkForNewEpisodes(series: Series): Resource<List<Episode>> = withContext(Dispatchers.IO) {
+        println("Looking for new episodes for ${series.name}")
+        val scraper = LinkScraper(model)
+        val result = scraper.getSeriesEpisodes(series.link)
+        if (result.data != null) {
+            if (result.data.size > series.episodes.size) {
+                return@withContext Resource.Success(
+                    compareForNewEpisodes(
+                        series,
+                        result.data
+                    )
+                )
+            }
+        }
+        return@withContext Resource.Error("No new episode have been found for ${series.name}.")
+    }
+
+    private fun compareForNewEpisodes(
+        series: Series,
+        latestEpisodes: List<Episode>
+    ): List<Episode> {
+        val episodes = ArrayList<Episode>()
+        for (e in latestEpisodes) {
+            if (!series.hasEpisode(e)) {
+                episodes.add(e)
+            }
+        }
+        return episodes
+    }
+
     fun launch() {
-        model.start()
+        if (model.episodes.isEmpty()) {
+            println("Failed to find any episodes for this link.")
+            return
+        }
         val saveFolder: String
-        val name = model.links[0].name
+        val name = model.episodes[0].name
         val nameToLowercase = name.lowercase(Locale.US)
         saveFolder = if (nameToLowercase.contains("episode")) {
             name.substring(0, nameToLowercase.indexOf("episode")).trim { it <= ' ' }
@@ -57,30 +97,27 @@ class BuddyHandler(private val model: Model) {
             val saveDir = File(model.settings().getString(Defaults.SAVEFOLDER))
             if (!saveDir.exists()) {
                 if (!saveDir.mkdir()) {
-                    uiScope.launch {
-                        AlertBox.show(
-                            Alert.AlertType.ERROR, "Your download folder doesn't exist.", "Be sure to set it inside " +
-                                    "the settings before downloading videos."
+                    withContext(Dispatchers.JavaFx) {
+                        model.showError(
+                            "Your download folder doesn't exist.",
+                            "Be sure to set it inside the settings before downloading videos."
                         )
+                        model.openSettings(0)
                     }
-                    model.stop()
-                    uiScope.cancel()
-                    cancel()
+                    kill()
                     return@task
                 }
             }
             val outputDir = File(saveDir.absolutePath + File.separator + saveFolder)
             if (!outputDir.exists()) {
                 if (!outputDir.mkdir()) {
-                    uiScope.launch {
-                        AlertBox.show(
-                            Alert.AlertType.ERROR, "Unable to create series folder.",
+                    withContext(Dispatchers.JavaFx) {
+                        model.showError(
+                            "Unable to create series folder.",
                             saveDir.absolutePath + File.separator + saveFolder + " was unable to be created."
                         )
                     }
-                    model.stop()
-                    uiScope.cancel()
-                    cancel()
+                    kill()
                     return@task
                 }
             }
@@ -92,7 +129,7 @@ class BuddyHandler(private val model: Model) {
                                     + File.separator + "links.txt"
                         )
                     )
-                    for (episode in model.links) {
+                    for (episode in model.episodes) {
                         w.write(episode.link)
                         w.newLine()
                     }
@@ -107,42 +144,42 @@ class BuddyHandler(private val model: Model) {
                 }
             }
             try {
-                var threads = model.settings().getInteger(Defaults.THREADS)
-                if (model.links.size < threads) {
-                    threads = model.links.size
+                var threads = model.settings().getInteger(Defaults.DOWNLOADTHREADS)
+                if (model.episodes.size < threads) {
+                    threads = model.episodes.size
                 }
-                val service = Executors.newFixedThreadPool(threads)
-                var i = 0
-                while (i < threads) {
-                    service.submit(VideoDownloader(model, outputDir.absolutePath))
-                    i++
+                val tasks = mutableListOf<Job>()
+                for (i in 1..threads) {
+                    tasks.add(
+                        launch {
+                            VideoDownloader(model, outputDir.absolutePath).run()
+                        }
+                    )
                 }
-                service.shutdown()
-                if (service.awaitTermination(8, TimeUnit.HOURS)) {
-                    if (model.downloadsFinishedForSession > 0) {
-                        println("Gracefully finished downloading all files.")
-                        model.openFolder(outputDir, false)
-                    } else {
-                        if (outputDir.exists()) {
-                            val files = outputDir.listFiles()
-                            if (files != null && files.isEmpty()) {
-                                if (outputDir.delete()) {
-                                    println("Deleted empty output folder.")
-                                }
+                tasks.joinAll()
+                if (model.downloadsFinishedForSession > 0) {
+                    println("Gracefully finished downloading all files.")
+                    model.openFolder(outputDir, false)
+                } else {
+                    if (outputDir.exists()) {
+                        val files = outputDir.listFiles()
+                        if (files != null && files.isEmpty()) {
+                            if (outputDir.delete()) {
+                                println("Deleted empty output folder.")
                             }
                         }
-                        println("Gracefully shutdown. No downloads have been made.")
                     }
-                } else {
-                    println("Failed to shutdown service. Forcing a shutdown. Data may be lost.")
-                    service.shutdownNow()
+                    println("Gracefully shutdown. No downloads have been made.")
                 }
             } catch (e: Exception) {
                 println("Download service error: " + e.localizedMessage)
             }
-            model.stop()
-            uiScope.cancel()
-            cancel()
+            kill()
         }
+    }
+
+    fun kill() {
+        model.stop()
+        taskScope.cancel()
     }
 }

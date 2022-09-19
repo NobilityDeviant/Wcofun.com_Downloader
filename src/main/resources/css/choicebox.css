@@ -1,0 +1,35 @@
+* {
+    primary: #5b65a3;
+    focus: #7380d1;
+    text-color: white;
+}
+
+
+/*Background color of the control itself*/
+.choice-box {
+    -fx-background-color: primary;
+    -fx-mark-color: text-color; /*arrow color*/
+}
+
+/*Selected item text color on the control itself*/
+.choice-box > .label {
+    -fx-text-fill: text-color;
+}
+
+/*Background color of the whole context menu*/
+.choice-box .context-menu {
+    -fx-background-color: primary;
+}
+
+/*Focused item background color in the list*/
+.choice-box .menu-item:focused {
+    -fx-background-color: focus;
+}
+/*Text color of non-focused items in the list*/
+.choice-box .menu-item > .label {
+    -fx-text-fill: text-color;
+}
+/*Text color of focused item in the list*/
+.choice-box .menu-item:focused > .label {
+    -fx-text-fill: text-color;
+}

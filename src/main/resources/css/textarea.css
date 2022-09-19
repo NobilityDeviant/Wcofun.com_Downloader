@@ -1,11 +1,24 @@
 .text-area {
-     -fx-focus-color: transparent;
-     -fx-border-style: none;
+    -fx-background-color: rgba(220, 230, 239, 0.2);
+    -fx-text-fill: white;
+    -fx-focus-color: transparent;
+    -fx-border-style: none;
 }
 
 .text-area .content {
-    -fx-background-color: white;
     -fx-background-radius: 10;
+}
+
+.text-area .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.text-area .scroll-pane .viewport{
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:horizontal, .scroll-bar:vertical{
+    -fx-background-color:transparent;
 }
 
 .increment-button, .decrement-button {
@@ -22,12 +35,12 @@
 
 .scroll-bar:horizontal .thumb,
 .scroll-bar:vertical .thumb {
-    -fx-background-color: #10165F;
+    -fx-background-color: #a8c1d7;
     -fx-background-radius: 5em;
 }
 
 .scroll-pane > .corner {
-    -fx-background-color: black;
+    -fx-background-color: #a8c1d7;
 }
 
 .text-area .scroll-pane .content{
@@ -35,9 +48,9 @@
 }
 
 .slider .track {
-    -fx-background-color: #10165F;
+    -fx-background-color: #a8c1d7;
 }
 
 .slider .thumb {
-     -fx-background-color: #96c1ff;
+    -fx-background-color: #96c1ff;
 }

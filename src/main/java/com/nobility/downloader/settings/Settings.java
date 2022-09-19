@@ -3,6 +3,10 @@ package com.nobility.downloader.settings;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A class used to store settings inside maps with different types.
+ * This can be serialized, but json is better.
+ */
 public class Settings {
 
     private final Map<String, Integer> integers = new HashMap<>();

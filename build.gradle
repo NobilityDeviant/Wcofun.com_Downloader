@@ -7,7 +7,8 @@ plugins {
 }
 
 application {
-    mainClassName = 'com.nobility.downloader.Main'
+    mainClass.set('com.nobility.downloader.Main')
+    //mainClassName = 'com.nobility.downloader.Main'
 }
 
 jar {
@@ -34,7 +35,7 @@ repositories {
     mavenCentral()
 }
 
-sourceSets {
+/*sourceSets {
     main {
         java {
             srcDirs = ['./src/main/java/']
@@ -43,7 +44,7 @@ sourceSets {
             srcDirs = ['./src/main/resources/']
         }
     }
-}
+}*/
 
 dependencies {
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
@@ -51,11 +52,13 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.3'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.13.3'
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-paranamer', version: '2.13.3'
-    implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.1'
+    implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.3'
     implementation group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '4.3.0'
-    implementation 'io.github.bonigarcia:webdrivermanager:5.2.0'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.3.0'
+    implementation 'org.slf4j:slf4j-api:2.0.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.0'
     //implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.3")
+    implementation('org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4')
     implementation group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-javafx', version: '1.6.3'
 }
 
