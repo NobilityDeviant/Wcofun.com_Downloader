@@ -2,13 +2,13 @@
 
 Used to download videos and series from https://www.wcofun.net/
 
-Coded in JDK 8.
+Coded in JDK 8 and Kotlin.
 
 You need java 8 to run this program. https://www.java.com/en/download/manual.jsp
 
-You will need Chrome to use this program: https://www.google.com/chrome/
+You will need Chrome, Chromium, Opera, Edge, Firefox or Safari to use this program.
 
-> This program relies heavily on Selenium and ChromeDriver. ChromeDriver will automatically download for your Operating System and Chrome Version.
+> This program relies heavily on Selenium. The driver for the chosen browser will automatically download.
 
 Download the releases here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
 
@@ -16,16 +16,18 @@ JDK 8 is needed to compile it: https://www.openlogic.com/openjdk-downloads?field
 
 I use IntelliJ as an IDE: https://www.jetbrains.com/idea/download/ - The Community Version will work just fine.
 
-
 ![Alt text](images/home.png?raw=true "Home Tab")
 
 A lot of work was put into this one!
 I manually downloaded so many videos from wco that I decided to create this bad boy.
 
 This downloader is multi-threaded, customizable, resizeable, fast and easy to use!
+Utilizes Kotlin's coroutines for a fast and smooth experience.
 
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
+
+Will update screenshots on next release.
 
 # Downloads
 
