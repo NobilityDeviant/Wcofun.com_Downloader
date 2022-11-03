@@ -33,7 +33,7 @@ All past and current downloads will go inside this organized tab here:
 
 ![Alt text](images/downloads.png?raw=true "Download Tab")
 
-You can interact with the downloads by using the Action menu buttons.
+You can interact with the downloads by right clicking any entry.
 
 Every download will go inside their respective Series folder to keep it organized. 
 Just select the main download folder in the settings. The default one is your home folder.
