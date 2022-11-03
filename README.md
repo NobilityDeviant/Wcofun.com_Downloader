@@ -1,4 +1,4 @@
-# Wcofun.com Downloader
+# Wcofun.net Downloader
 
 Used to download videos and series from https://www.wcofun.net/
 
