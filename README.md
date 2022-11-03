@@ -75,6 +75,11 @@ Now inside the wco window, you can view the latest episodes and series displayed
 Just as a little QoL feature.
 Right click any entry to see the options.
 
+NOTE: This window isn't very optimized. It can be quite slow due to the big amount of data.
+I suggest not using the columns to sort and only use the search bar. :)
+
+Maybe one day I'll use Compose for the UI.
+
 Enjoy and have fun!
 
 Known Issue: This program does not support downloading 2 videos from one page.
