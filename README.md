@@ -41,9 +41,39 @@ Every download will go inside their respective Series folder as shown in the ima
 
 # Settings
 
-![Alt text](images/wco_settings.png?raw=true "Settings Window")
+![Alt text](images/settings.png?raw=true "Settings Window")
 
 You can adjust your settings by going to Settings > Open Settings in the menu bar.
+
+# Series Details
+
+![Alt text](images/seriesdetails.png?raw=true "Series Details WIndow")
+
+With the new cache system, you don't even need to visit wco to check out a series details!
+
+# Download Confirm
+
+![Alt text](images/downloadconfirm.png?raw=true "Download Confirm Window")
+
+You are now able to select all the episodes inside a series you want to download!
+It feels so much better than the max episodes option.
+
+# WCO Database
+
+![Alt text](images/wco.png?raw=true "WCO Window")
+
+Now as an optional download, you can view ALL the series inside wcofun all from this simple window.
+It has the same categories (minus OVA because it's just in dubbed/subbed) and is so much easier to use.
+You can even use the search bar to filter through a keyword, or genre.
+Why doesn't wco have images next to their links? IDK but that's why I created this.
+
+# Recent
+
+![Alt text](images/recent.png?raw=true "Recent Window")
+
+Now inside the wco window, you can view the latest episodes and series displayed on the wco home page.
+Just as a little QoL feature.
+Right click any entry to see the options.
 
 Enjoy and have fun!
 
