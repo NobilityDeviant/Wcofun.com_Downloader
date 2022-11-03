@@ -116,11 +116,15 @@ class UpdateManager(private val model: Model) {
             if (latestSplit[0].toInt() > current[0].toInt()) {
                 return false
             }
-            if (latestSplit[1].toInt() > current[1].toInt()) {
-                return false
+            if (latestSplit.size > 1) {
+                if (latestSplit[1].toInt() > current[1].toInt()) {
+                    return false
+                }
             }
-            if (latestSplit[2].toInt() > current[2].toInt()) {
-                return false
+            if (latestSplit.size > 2) {
+                if (latestSplit[2].toInt() > current[2].toInt()) {
+                    return false
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
