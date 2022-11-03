@@ -1,0 +1,14 @@
+* {
+    track-color: #7380d1;
+    thumb-color: #5b65a3;
+    border-color: track-color;/*#8d9bf0;*/
+}
+
+.slider .track {
+    -fx-control-inner-background: track-color;
+    /*-fx-border-color: border-color;*/
+}
+
+.slider .thumb {
+    -fx-background-color: thumb-color;
+}

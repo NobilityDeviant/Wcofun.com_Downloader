@@ -1,27 +1,21 @@
 package com.nobility.downloader
 
-import com.nobility.downloader.downloads.Download
-import com.nobility.downloader.downloads.Downloads
-import com.nobility.downloader.history.History
-import com.nobility.downloader.cache.Series
+import com.nobility.downloader.entities.BoxStoreHandler
+import com.nobility.downloader.entities.Download
+import com.nobility.downloader.entities.Episode
+import com.nobility.downloader.entities.Series
 import com.nobility.downloader.scraper.BuddyHandler
-import com.nobility.downloader.cache.Episode
-import com.nobility.downloader.cache.WebsiteData
-import com.nobility.downloader.scraper.CategoryUpdater
-import com.nobility.downloader.series.SeriesDetails
 import com.nobility.downloader.series.SeriesDetailsController
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.settings.JsonManager
-import com.nobility.downloader.settings.Settings
 import com.nobility.downloader.settings.SettingsController
-import com.nobility.downloader.updates.ConfirmController
 import com.nobility.downloader.updates.UpdateManager
 import com.nobility.downloader.utils.TextOutput
 import com.nobility.downloader.utils.Toast
 import com.nobility.downloader.utils.Tools
-import com.nobility.downloader.utils.Tools.fixOldLink
+import com.nobility.downloader.wco.WcoController
 import javafx.application.Platform
 import javafx.collections.FXCollections
+import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
@@ -34,7 +28,9 @@ import javafx.stage.Stage
 import javafx.util.Callback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.SystemUtils
 import org.openqa.selenium.WebDriver
 import java.awt.Desktop
@@ -51,33 +47,28 @@ import kotlin.system.exitProcess
 class Model {
 
     lateinit var mainStage: Stage
-    private var _settings: Settings? = null
-    private val settings get() = _settings!!
-    private var downloadHistory: History? = null
-    private val historySave get() = downloadHistory!!
-    private var _downloads: Downloads? = null
-    private val downloadSave get() = _downloads!!
-    private var _websiteData: WebsiteData? = null
-    private val data get() = _websiteData!!
     val taskScope = CoroutineScope(Dispatchers.Default)
-    val backgroundScope = CoroutineScope(Dispatchers.Default)
-
-    private lateinit var userAgents: List<String>
+    private val uiScope = CoroutineScope(Dispatchers.JavaFx)
+    private val userAgents = ArrayList<String>()
     var isRunning = false
         private set
     //it is needed here for other download checks across the app.
     val episodes: MutableList<Episode> = Collections.synchronizedList(ArrayList())
+    private lateinit var downloadList: ObservableList<Download>
     var isClientUpdating = false
+    var developerMode = false
+    var isUpdatingWco = false
 
     @Volatile
     var downloadsFinishedForSession = 0
         private set
+    @Volatile
+    var downloadsInProgressForSession = 0
+        private set
     lateinit var tableView: TableView<Download>
         private set
-    val runningDrivers: MutableList<WebDriver?> = Collections.synchronizedList(ArrayList())
 
-    @JvmField
-    var details: MutableList<SeriesDetails> = Collections.synchronizedList(ArrayList())
+    val runningDrivers: MutableList<WebDriver?> = Collections.synchronizedList(ArrayList())
 
     @FXML
     lateinit var urlTextField: TextField
@@ -88,11 +79,17 @@ class Model {
     @FXML
     private lateinit var startButton: Button
 
+    private val store = BoxStoreHandler(this)
+
     private fun canStart(checkUrl: Boolean): Boolean {
         if (isRunning) {
             return false
         }
-        val downloadFolder = File(settings.getString(Defaults.SAVEFOLDER))
+        if (isUpdatingWco) {
+            showError("You can't download videos while the wco db is being updated.")
+            return false
+        }
+        val downloadFolder = File(store.stringSetting(Defaults.SAVEFOLDER))
         if (!downloadFolder.exists()) {
             showError("The downloader folder in your settings doesn't exist.")
             openSettings(0)
@@ -134,79 +131,43 @@ Episode: $EXAMPLE_SHOW
                 )
                 return false
             }
+            try {
+                URL(url).toURI()
+            } catch (_: Exception) {
+                showError("This is not a valid URL.")
+                return false
+            }
         }
-        if (settings.getInteger(Defaults.DOWNLOADTHREADS) < 1) {
+        if (store.integerSetting(Defaults.DOWNLOADTHREADS) < 1) {
             showError("Your download threads must be higher than 0.")
             return false
         }
-        if (settings.getInteger(Defaults.DOWNLOADTHREADS) > 10) {
+        if (store.integerSetting(Defaults.DOWNLOADTHREADS) > 10) {
             showError("Your download threads must be lower than 10.")
-            return false
-        }
-        if (settings.getInteger(Defaults.MAXEPISODES) > 9999) {
-            showError("Your episodes can't be higher than 9999.")
-            return false
-        }
-        if (settings.getInteger(Defaults.MAXEPISODES) < 0) {
-            showError("Your episodes can't be lower than 0.")
             return false
         }
         return true
     }
 
-    fun downloadNewEpisodesForSeries(series: Series) {
-        if (!canStart(false)) {
-            return
-        }
-        Platform.runLater {
-            startButton.isDisable = true
-            stopButton.isDisable = false
-        }
-        isRunning = true
-        episodes.clear()
-        downloadsFinishedForSession = 0
-        taskScope.launch {
-            val buddyHandler = BuddyHandler(this@Model)
-            try {
-                val newEpisodes = buddyHandler.checkForNewEpisodes(series)
-                if (newEpisodes.data != null) {
-                    println("Found ${newEpisodes.data.size} new episode(s). Starting the downloader.")
-                    series.episodes.addAll(newEpisodes.data)
-                    val added = historySave.addSeries(series, true)
-                    if (added) {
-                        saveSeriesHistory()
-                    }
-                    episodes.addAll(newEpisodes.data)
-                    buddyHandler.launch()
-                } else {
-                    throw Exception(newEpisodes.message)
-                }
-            } catch (e: Exception) {
-                buddyHandler.kill()
-                stop()
-                //e.printStackTrace()
-                println("Failed to download new episodes." +
-                        "\nError: " + e.localizedMessage)
-                return@launch
-            }
-        }
+    fun downloadNewEpisodesForSeries(seriesList: List<Series>) {
+        println("Checking ${seriesList.size} series for new episodes.")
+        downloadNewEpisodesForSeries(seriesList)
     }
 
     fun start() {
         if (!canStart(true)) {
             return
         }
-        Platform.runLater {
+        uiScope.launch {
             startButton.isDisable = true
             stopButton.isDisable = false
         }
         val url = urlTextField.text
         isRunning = true
-        settings.setString(Defaults.LASTDOWNLOAD, url)
-        saveSettings()
+        store.setSetting(Defaults.LASTDOWNLOAD, url)
         episodes.clear()
         downloadsFinishedForSession = 0
-        saveSettings()
+        downloadsInProgressForSession = 0
         taskScope.launch {
             val buddyHandler = BuddyHandler(this@Model)
             try {
@@ -215,23 +176,33 @@ Episode: $EXAMPLE_SHOW
                 buddyHandler.kill()
                 stop()
                 e1.printStackTrace()
-                Platform.runLater { showError(
-                    "Failed to read episodes from $url" +
+                withContext(Dispatchers.JavaFx) {
+                    showError("Failed to read episodes from $url" +
                             "\nError: " + e1.localizedMessage
-                ) }
+                    )
+                }
                 return@launch
             }
-            settings.setString(Defaults.LASTDOWNLOAD, "")
-            saveSettings()
+            store.setSetting(Defaults.LASTDOWNLOAD, "")
             buddyHandler.launch()
         }
+    }
+
+    fun softStart() {
+        uiScope.launch {
+            startButton.isDisable = true
+            stopButton.isDisable = false
+        }
+        isRunning = true
+        downloadsFinishedForSession = 0
+        downloadsInProgressForSession = 0
     }
 
     fun stop() {
         if (!isRunning) {
             return
         }
-        Platform.runLater {
+        uiScope.launch {
             startButton.isDisable = false
             stopButton.isDisable = true
         }
@@ -239,13 +210,14 @@ Episode: $EXAMPLE_SHOW
     }
 
     private fun downloadUserAgents() {
-        val resources = File(".${File.separator}resources${File.separator}ua.txt")
+        val resources = File(".${File.separator}resources${File.separator}")
         if (!resources.exists()) {
             if (!resources.mkdir()) {
                 println("Failed to find or create resources folder. Unable to download user agents.")
                 return
             }
         }
+        val userAgentsFile = File("${resources.absolutePath}${File.separator}ua.txt")
         taskScope.launch(Dispatchers.IO) {
             val buffer = ByteArray(2048)
             try {
@@ -254,20 +226,25 @@ Episode: $EXAMPLE_SHOW
                         "https://www.dropbox.com/s/42q46p69n4b84o7/ua.txt?dl=1"
                     ).openStream()
                 ).use { `in` ->
-                    FileOutputStream(resources).use { fileOutputStream ->
-                        BufferedOutputStream(fileOutputStream, buffer.size).use { bos ->
+                    FileOutputStream(userAgentsFile).use { fos ->
+                        BufferedOutputStream(fos, buffer.size).use { bos ->
                             var bytesRead: Int
                             while (`in`.read(buffer, 0, 2048).also { bytesRead = it } != -1) {
                                 bos.write(buffer, 0, bytesRead)
                             }
                             println("Successfully downloaded user agents.")
-                            try {
-                                userAgents = Files.readAllLines(resources.toPath())
-                                println("Successfully loaded " + userAgents.size + " user agents.")
-                            } catch (e: Exception) {
-                                println("Failed to read download user agents file. Defaulting to using one.")
+                        }
+                    }
+                    try {
+                        for (s in Files.readAllLines(userAgentsFile.toPath())) {
+                            if (!s.contains("-->>")) {
+                                userAgents.add(s)
                             }
                         }
+                        println("Successfully loaded " + userAgents.size + " user agents.")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        println("Failed to read downloaded user agents file. Defaulting to using one.")
                     }
                 }
             } catch (e: IOException) {
@@ -286,12 +263,23 @@ Episode: $EXAMPLE_SHOW
             println("Failed to show update window. Latest update is null.")
             return
         }
-        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "confirm.fxml"))
+        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "update.fxml"))
         loader.controllerFactory = Callback { controllerType: Class<*> ->
             try {
                 for (con in controllerType.constructors) {
-                    if (con.parameterCount == 1 && con.parameterTypes[0] == Model::class.java) {
-                        return@Callback con.newInstance(this)
+                    if (
+                        con.parameterCount == 4
+                        && con.parameterTypes[0] == Model::class.java
+                        && con.parameterTypes[1] == Stage::class.java
+                        && con.parameterTypes[2] == Boolean::class.java
+                        && con.parameterTypes[3] == Boolean::class.java
+                    ) {
+                        return@Callback con.newInstance(
+                            this,
+                            confirmStage,
+                            required,
+                            upToDate
+                        )
                     }
                 }
                 return@Callback controllerType.getDeclaredConstructor().newInstance()
@@ -303,9 +291,7 @@ Episode: $EXAMPLE_SHOW
         }
         try {
             val root = loader.load<Parent>()
-            val confirmController = loader.getController<ConfirmController>()
             val scene = Scene(root)
-            confirmController.setStage(confirmStage, required, upToDate)
             val icon = Main::class.java.getResourceAsStream(MAIN_ICON)
             if (icon != null) {
                 confirmStage.icons.add(Image(icon))
@@ -316,7 +302,6 @@ Episode: $EXAMPLE_SHOW
             confirmStage.sizeToScene()
             confirmStage.showAndWait()
         } catch (e: IOException) {
-            e.printStackTrace()
             println("Failed to show update confirm window. Error: ${e.localizedMessage}")
         }
     }
@@ -329,32 +314,20 @@ Episode: $EXAMPLE_SHOW
             return
         }
         val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "seriesdetails.fxml"))
-        /*loader.controllerFactory = Callback { controllerType: Class<*> ->
-            try {
-                for (con in controllerType.constructors) {
-                    if (con.parameterCount == 3 && con.parameterTypes[0] == Model::class.java
-                        && con.parameterTypes[1] == Stage::class.java
-                        && con.parameterTypes[2] == String::class.java) {
-                        return@Callback con.newInstance(this, detailsStage, link)
-                    }
-                }
-                return@Callback controllerType.getDeclaredConstructor().newInstance()
-            } catch (e: Exception) {
-                println("Failed to load VideoDetailsController. Error: ${e.localizedMessage}")
-                e.printStackTrace(System.err)
-                return@Callback null
-            }
-        }*/
         try {
             val root = loader.load<Parent>()
             val scene = Scene(root)
+            scene.stylesheets.add(
+                Main::class.java.getResource(
+                    CSS_PATH + "contextmenu.css"
+                )?.toString() ?: ""
+            )
             detailsStage.title = "Series Details"
             val icon = Main::class.java.getResourceAsStream(SETTINGS_ICON)
             if (icon != null) {
                 detailsStage.icons.add(Image(icon))
             }
             detailsStage.isResizable = true
-            //detailsStage.initStyle(StageStyle.DECORATED)
             detailsStage.toFront()
             detailsStage.scene = scene
             detailsStage.sizeToScene()
@@ -366,7 +339,7 @@ Episode: $EXAMPLE_SHOW
         }
     }
 
-    private var settingsStage: Stage = Stage()
+    private val settingsStage: Stage = Stage()
 
     @JvmOverloads
     fun openSettings(command: Int = -1) {
@@ -380,14 +353,18 @@ Episode: $EXAMPLE_SHOW
         loader.controllerFactory = Callback { controllerType: Class<*> ->
             try {
                 for (con in controllerType.constructors) {
-                    if (con.parameterCount == 2 && con.parameterTypes[0] == Model::class.java && con.parameterTypes[1] == Stage::class.java) {
+                    if (
+                        con.parameterCount == 2
+                        && con.parameterTypes[0] == Model::class.java
+                        && con.parameterTypes[1] == Stage::class.java
+                    ) {
                         return@Callback con.newInstance(this, settingsStage)
                     }
                 }
                 return@Callback controllerType.getDeclaredConstructor().newInstance()
             } catch (e: Exception) {
                 println("Failed to load SettingsController. Error: ${e.localizedMessage}")
-                e.printStackTrace(System.err)
+                e.printStackTrace()
                 return@Callback null
             }
         }
@@ -407,56 +384,143 @@ Episode: $EXAMPLE_SHOW
         }
     }
 
-    fun setTableView(tableView: TableView<Download>) {
+    private val downloadConfirmStage: Stage = Stage()
+    //todo
+    fun openDownloadConfirm(series: Series, episode: Episode?) {
+        downloadConfirmStage.title = "Download Series"
+        val icon = Main::class.java.getResourceAsStream(MAIN_ICON)
+        if (icon != null) {
+            downloadConfirmStage.icons.add(Image(icon))
+        }
+        downloadConfirmStage.isResizable = true
+        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "download_confirm.fxml"))
+        loader.controllerFactory = Callback { controllerType: Class<*> ->
+            try {
+                for (con in controllerType.constructors) {
+                    if (
+                        con.parameterCount == 4
+                        && con.parameterTypes[0] == Model::class.java
+                        && con.parameterTypes[1] == Stage::class.java
+                        && con.parameterTypes[2] == Series::class.java
+                        && con.parameterTypes[3] == Episode::class.java
+                    ) {
+                        return@Callback con.newInstance(this, downloadConfirmStage, series, episode)
+                    }
+                }
+                return@Callback controllerType.getDeclaredConstructor().newInstance()
+            } catch (e: Exception) {
+                println("Failed to load DownloadConfirmController. Error: ${e.localizedMessage}")
+                e.printStackTrace()
+                return@Callback null
+            }
+        }
+        val layout: Parent
+        try {
+            layout = loader.load()
+            val scene = Scene(layout)
+            downloadConfirmStage.toFront()
+            downloadConfirmStage.scene = scene
+            downloadConfirmStage.sizeToScene()
+            downloadConfirmStage.show()
+        } catch (e: IOException) {
+            e.printStackTrace()
+            println("Failed to open download confirm window. Error: ${e.localizedMessage}")
+        }
+    }
+
+    private val wcoStage: Stage = Stage()
+
+    fun openWco() {
+        wcoStage.title = "Series"
+        val icon = Main::class.java.getResourceAsStream(SETTINGS_ICON)
+        if (icon != null) {
+            wcoStage.icons.add(Image(icon))
+        }
+        wcoStage.isResizable = true
+        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "wco.fxml"))
+        val layout: Parent
+        try {
+            layout = loader.load()
+            val scene = Scene(layout)
+            scene.stylesheets.add(
+                Main::class.java.getResource(
+                    CSS_PATH + "contextmenu.css"
+                )?.toString() ?: ""
+            )
+            wcoStage.toFront()
+            wcoStage.scene = scene
+            wcoStage.sizeToScene()
+            wcoStage.show()
+            loader.getController<WcoController>()?.setup(this, wcoStage)
+        } catch (e: IOException) {
+            e.printStackTrace()
+            println("Failed to open wco window. Error: ${e.localizedMessage}")
+        }
+    }
+
+    fun setTableView(tableView: TableView<Download>, dateColumn: TableColumn<Download, String>) {
         this.tableView = tableView
-        tableView.items.addAll(FXCollections.observableArrayList(downloadSave.downloads))
+        downloadList = FXCollections.observableArrayList(store.downloadBox.all)
+        tableView.items = downloadList
+        //done this way because setting new items removes the sort order
+        tableView.sortOrder.add(dateColumn)
+        //tableView.items.addAll(store.downloadBox.all)
+        for (download in tableView.items) {
+            download.updateProgress()
+            download.updateFileSizeProperty()
+        }
         tableView.sort()
     }
 
     @Synchronized
     fun addDownload(download: Download) {
-        if (!tableView.items.contains(download)) {
-            tableView.items.add(download)
-            downloadSave.downloads.add(download)
+        if (indexForDownload(download) == -1) {
+            download.updateProgress()
+            downloadList.add(download)
+            store.downloadBox.put(download)
             tableView.sort()
-            saveDownloads()
+        } else {
+            updateDownloadInDatabase(download, true)
         }
     }
 
     fun removeDownload(download: Download) {
-        tableView.items.remove(download)
-        downloadSave.downloads.remove(download)
-        tableView.sort()
-        saveDownloads()
+        //tableView.items.remove(download)
+        downloadList.remove(download)
+        store.downloadBox.remove(download)
+        //tableView.sort()
     }
 
     fun updateDownloadProgress(download: Download) {
-        tableView.items[indexForDownload(download, true)].updateProgress()
-        downloadSave.downloads[indexForDownload(download, false)].updateProgress()
-        saveDownloads()
-    }
-
-    fun updateDownload(download: Download) {
-        tableView.items[indexForDownload(download, true)].update(download)
-        downloadSave.downloads[indexForDownload(download, false)].update(download)
-        saveDownloads()
-    }
-
-    private fun indexForDownload(download: Download, table: Boolean): Int {
-        return if (table) {
-            tableView.items.indexOf(download)
-        } else {
-            downloadSave.downloads.indexOf(download)
+        val index = indexForDownload(download)
+        if (index != -1) {
+            downloadList[index].updateProgress()
         }
     }
 
-    fun getDownloadForUrl(url: String): Download? {
-        for (download in downloadSave.downloads) {
-            if (fixOldLink(download.episode.link) == url) {
-                return download
+    fun updateDownloadFileSize(download: Download) {
+        val index = indexForDownload(download)
+        if (index != -1) {
+            downloadList[index].updateFileSizeProperty()
+        }
+    }
+
+    fun updateDownloadInDatabase(download: Download, updateProperties: Boolean) {
+        store.downloadBox.put(download)
+        //used to keep the downloads inside the table in sync
+        val index = indexForDownload(download)
+        if (index != -1) {
+            downloadList[index].update(download, updateProperties)
+        }
+    }
+
+    private fun indexForDownload(download: Download): Int {
+        for ((index, d) in downloadList.withIndex()) {
+            if (d.matches(download)) {
+                return index
             }
         }
-        return null
+        return -1
     }
 
     val randomUserAgent: String
@@ -466,30 +530,32 @@ Episode: $EXAMPLE_SHOW
             "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1"
         }
 
-    fun saveSettings() {
-        JsonManager.saveSettings(settings)
-    }
-
-    fun saveSeriesHistory() {
-        JsonManager.saveHistory(historySave)
-    }
-
-    fun saveDownloads() {
-        JsonManager.saveDownloads(downloadSave)
-    }
-
-    fun saveData() {
-        JsonManager.saveWebsiteData(data)
-    }
-
-    val linkUrls: List<String>
-        get() {
-            val urls: MutableList<String> = ArrayList()
-            for (episode in episodes) {
-                urls.add(episode.link)
+    private fun isEpisodeInQueue(episode: Episode): Boolean {
+        for (e in episodes) {
+            if (e.matches(episode)) {
+                return true
             }
-            return urls
         }
+        return false
+    }
+
+    fun addEpisodeToQueue(episode: Episode): Boolean {
+        if (!isEpisodeInQueue(episode)) {
+            episodes.add(episode)
+            return true
+        }
+        return false
+    }
+
+    fun addSeriesToQueue(series: Series): Int {
+        var added = 0
+        for (e in series.episodes) {
+            if (addEpisodeToQueue(e)) {
+                added++
+            }
+        }
+        return added
+    }
 
     @get:Synchronized
     val nextLink: Episode?
@@ -502,6 +568,7 @@ Episode: $EXAMPLE_SHOW
             return link
         }
 
+    @Suppress("UNUSED")
     fun openFolder(file: File?, parent: Boolean) {
         if (file == null) {
             showError("This file is corrupted.")
@@ -548,9 +615,6 @@ Episode: $EXAMPLE_SHOW
                     }
                 }
             }
-            saveSettings()
-            saveSeriesHistory()
-            saveDownloads()
             exitProcess(-1)
         }
         if (isRunning) {
@@ -570,9 +634,6 @@ Episode: $EXAMPLE_SHOW
                         }
                     }
                 }
-                saveSettings()
-                saveSeriesHistory()
-                saveDownloads()
                 shutdownExecuted = true
                 exitProcess(0)
             }
@@ -588,15 +649,12 @@ Episode: $EXAMPLE_SHOW
                     }
                 }
             }
-            saveSettings()
-            saveSeriesHistory()
-            saveDownloads()
             shutdownExecuted = true
             exitProcess(0)
         }
     }
 
-    fun showMessage(title: String?, content: String?) {
+    fun showMessage(title: String = "", content: String) {
         val alert = Alert(Alert.AlertType.INFORMATION)
         alert.title = title
         alert.dialogPane.stylesheets.add(Main::class.java.getResource(DIALOG_PATH)?.toString() ?: "")
@@ -749,7 +807,7 @@ Episode: $EXAMPLE_SHOW
             e.printStackTrace()
             System.err.println("Failed to open file. Error: " + e.localizedMessage)
             if (toastOnError) {
-                Platform.runLater { Toast.makeToast(mainStage, "Failed to open file.", e) }
+                Platform.runLater { toast("Failed to open file.", e, mainStage) }
             }
         }
     }
@@ -759,77 +817,47 @@ Episode: $EXAMPLE_SHOW
         downloadsFinishedForSession++
     }
 
+    @Synchronized
+    fun incrementDownloadsInProgress() {
+        downloadsInProgressForSession++
+    }
+
+    @Synchronized
+    fun decrementDownloadsInProgress() {
+        downloadsInProgressForSession--
+    }
+
     val updateManager = UpdateManager(this)
-    var categoryUpdater: CategoryUpdater? = null
 
     init {
-        _websiteData = JsonManager.loadWebsiteData()
-        if (_websiteData == null) {
-            _websiteData = WebsiteData()
-            saveData()
-        }
-        _downloads = JsonManager.loadDownloads()
-        if (_downloads == null) {
-            _downloads = Downloads()
-            saveDownloads()
-        }
-        for (i in downloadSave.downloads.indices) {
-            downloadSave.downloads[i].updateProgress()
-        }
-        saveDownloads()
-        downloadHistory = JsonManager.loadHistory()
-        if (downloadHistory == null) {
-            downloadHistory = History()
-            saveSeriesHistory()
-        }
-        _settings = JsonManager.loadSettings()
-        if (_settings == null) {
-            _settings = Settings()
-            settings.loadDefaultSettings()
-        }
-        settings.checkForNewSettings()
-        saveSettings()
+
+        store.loadSettings()
+
         try {
-            userAgents = Files.readAllLines(
+            userAgents.addAll(Files.readAllLines(
                 File(
                     "." + File.separator
                             + "resources" + File.separator + "ua.txt"
                 ).toPath()
-            )
+            ))
             println("Successfully loaded " + userAgents.size + " user agents.")
         } catch (e: Exception) {
             println("Unable to load /resources/ua.txt (UserAgents) attempting to download them.")
             downloadUserAgents()
         }
-        if (settings.getBoolean(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
+        if (store.booleanSetting(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
             System.setProperty("webdriver.chrome.silentOutput", "true")
             Logger.getLogger("org.openqa.selenium").level = Level.OFF
         }
     }
 
-    fun settings(): Settings {
-        return settings
+    fun settings(): BoxStoreHandler {
+        return store
     }
 
-    fun history(): History {
-        return historySave
-    }
-
-    fun downloads(): Downloads {
-        return downloadSave
-    }
-
-    fun data(): WebsiteData {
-        return data
-    }
-
-    fun setTextOutput(textArea: TextArea?) {
+    fun setTextOutput(textArea: TextArea) {
         val output = TextOutput(textArea)
         System.setOut(PrintStream(output))
-    }
-
-    fun getLinks(): MutableList<Episode> {
-        return episodes
     }
 
     fun setStartButton(startButton: Button) {
@@ -841,20 +869,28 @@ Episode: $EXAMPLE_SHOW
     }
 
     fun toast(text: String) {
-        Toast.makeToast(mainStage, text)
+        Toast.makeToast(mainStage, text, store.doubleSetting(Defaults.TOASTTRANSPARENCY))
+    }
+
+    fun toast(text: String, stage: Stage, transparency: Double) {
+        Toast.makeToast(stage, text, transparency)
     }
 
     fun toast(text: String, stage: Stage) {
-        Toast.makeToast(stage, text)
+        Toast.makeToast(stage, text, store.doubleSetting(Defaults.TOASTTRANSPARENCY))
+    }
+
+    fun toast(text: String, e: Exception, stage: Stage) {
+        Toast.makeToast(stage, text, e, store.doubleSetting(Defaults.TOASTTRANSPARENCY))
     }
 
     companion object {
-        const val OLD_WEBSITE = "https://www.wcofun.com/"
-        const val WEBSITE = "https://www.wcofun.net/"
+        const val OLD_WEBSITE = "https://www.wcofun.com"
+        const val WEBSITE = "https://www.wcofun.net"
         const val GITHUB = "https://github.com/NobilityDeviant/Wcofun.com_Downloader"
-        const val EXAMPLE_SERIES = WEBSITE + "anime/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level"
+        const val EXAMPLE_SERIES = "$WEBSITE/anime/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level"
         const val EXAMPLE_SHOW =
-            WEBSITE + "ive-been-killing-slimes-for-300-years-and-maxed-out-my-level-episode-1-english-dubbed"
+            "$WEBSITE/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level-episode-1-english-dubbed"
         const val DEBUG_MODE = false
         const val FX_PATH = "/fx/"
         private const val IMAGE_PATH = "/images/"
@@ -862,5 +898,6 @@ Episode: $EXAMPLE_SHOW
         const val DIALOG_PATH = CSS_PATH + "dialog.css"
         const val SETTINGS_ICON = IMAGE_PATH + "icon.png"
         const val MAIN_ICON = IMAGE_PATH + "icon.png"
+        const val NO_IMAGE_ICON = IMAGE_PATH + "no-image.png"
     }
 }

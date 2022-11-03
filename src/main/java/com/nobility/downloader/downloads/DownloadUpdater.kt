@@ -1,6 +1,7 @@
 package com.nobility.downloader.downloads
 
 import com.nobility.downloader.Model
+import com.nobility.downloader.entities.Download
 import kotlinx.coroutines.delay
 
 class DownloadUpdater(private val model: Model, private val download: Download) {
@@ -12,6 +13,7 @@ class DownloadUpdater(private val model: Model, private val download: Download) 
             model.updateDownloadProgress(download)
             delay(500)
         }
+        model.updateDownloadProgress(download)
     }
 
     fun setRunning(running: Boolean) {

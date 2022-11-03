@@ -16,10 +16,10 @@
    <children>
       <TableView fx:id="table" prefHeight="568.0" prefWidth="961.0" stylesheets="@../css/tableview.css" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS">
          <columns>
-            <TableColumn fx:id="name_column" maxWidth="292.0" minWidth="221.0" prefWidth="263.0" text="Series Name" />
-            <TableColumn fx:id="link_column" maxWidth="306.0" minWidth="239.0" prefWidth="306.0" text="Series Link" />
-            <TableColumn fx:id="episodes_column" maxWidth="146.0" minWidth="104.0" prefWidth="122.0" text="Episodes" />
-            <TableColumn fx:id="date_column" maxWidth="265.0" minWidth="145.0" prefWidth="265.0" text="Date Added" />
+            <TableColumn fx:id="nameColumn" maxWidth="292.0" minWidth="221.0" prefWidth="263.0" text="Series Name" />
+            <TableColumn fx:id="linkColumn" maxWidth="306.0" minWidth="239.0" prefWidth="306.0" text="Series Link" />
+            <TableColumn fx:id="episodesColumn" maxWidth="146.0" minWidth="104.0" prefWidth="122.0" text="Episodes" />
+            <TableColumn fx:id="dateColumn" maxWidth="265.0" minWidth="145.0" prefWidth="265.0" text="Date Added" />
          </columns>
          <columnResizePolicy>
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

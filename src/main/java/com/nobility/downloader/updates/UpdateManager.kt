@@ -87,14 +87,12 @@ class UpdateManager(private val model: Model) {
             println("Failed to find latest update details. No error found.")
             return@withContext
         }
-        if (!model.settings().getString(Defaults.UPDATEVERSION)
+        if (!model.settings().stringSetting(Defaults.UPDATEVERSION)
                 .equals(latestUpdate!!.version, ignoreCase = true)) {
-            model.settings().setBoolean(Defaults.DENIEDUPDATE, false)
-            model.saveSettings()
+            model.settings().setSetting(Defaults.DENIEDUPDATE, false)
         }
-        if (!model.settings().getBoolean(Defaults.DENIEDUPDATE)) {
-            model.settings().setString(Defaults.UPDATEVERSION, latestUpdate!!.version)
-            model.saveSettings()
+        if (!model.settings().booleanSetting(Defaults.DENIEDUPDATE)) {
+            model.settings().setSetting(Defaults.UPDATEVERSION, latestUpdate!!.version)
             val latest = isLatest(latestUpdate!!.version)
             if (latest && !prompt) {
                 return@withContext

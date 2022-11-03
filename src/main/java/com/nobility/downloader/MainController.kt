@@ -1,10 +1,8 @@
 package com.nobility.downloader
 
-import com.nobility.downloader.downloads.Download
+import com.nobility.downloader.entities.Download
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.utils.StringChecker
 import com.nobility.downloader.utils.Tools
-import com.nobility.downloader.utils.Tools.bytesToString
 import com.nobility.downloader.utils.Tools.fixOldLink
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
@@ -17,13 +15,8 @@ import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.Image
-import javafx.scene.input.Clipboard
-import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
-import javafx.scene.input.MouseEvent
-import javafx.stage.Modality
+import javafx.scene.input.*
 import javafx.stage.Stage
-import javafx.stage.StageStyle
 import javafx.util.Callback
 import kotlinx.coroutines.launch
 import java.awt.Desktop
@@ -33,7 +26,8 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainController(private val model: Model) : Initializable {
+
+class MainController(private val model: Model, private val mainStage: Stage) : Initializable {
 
     @FXML
     private lateinit var urlSubmission: TextField
@@ -55,6 +49,9 @@ class MainController(private val model: Model) : Initializable {
 
     @FXML
     private lateinit var openDownloadHistory: MenuItem
+
+    @FXML
+    private lateinit var openWcoSeries: MenuItem
 
     @FXML
     private lateinit var openWebsite: MenuItem
@@ -83,14 +80,6 @@ class MainController(private val model: Model) : Initializable {
     @FXML
     private lateinit var dateColumn: TableColumn<Download, String>
 
-    fun setMainStage(mainStage: Stage) {
-        model.mainStage = mainStage
-        mainStage.widthProperty()
-            .addListener { _: ObservableValue<out Number?>?, _: Number?, _: Number? ->
-                downloadTable.refresh()
-            }
-    }
-
     override fun initialize(location: URL, resources: ResourceBundle?) {
         model.setTextOutput(console)
         model.urlTextField = urlSubmission
@@ -103,8 +92,8 @@ class MainController(private val model: Model) : Initializable {
         stopButton.isDisable = true
         model.setStartButton(startButton)
         model.setStopButton(stopButton)
-        val lastUrl = model.settings().getString(Defaults.LASTDOWNLOAD)
-        if (!StringChecker.isNullOrEmpty(lastUrl)) {
+        val lastUrl = model.settings().stringSetting(Defaults.LASTDOWNLOAD)
+        if (lastUrl.isNotEmpty()) {
             urlSubmission.text = lastUrl
         }
         downloadTable.columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
@@ -113,26 +102,18 @@ class MainController(private val model: Model) : Initializable {
         sizeColumn.maxWidth = (1f * Int.MAX_VALUE * 10).toDouble()
         progressColumn.maxWidth = (1f * Int.MAX_VALUE * 7).toDouble()
         nameColumn.setCellValueFactory {
-            SimpleStringProperty(it.value.episode.name)
+            SimpleStringProperty(it.value.name)
         }
         sizeColumn.setCellValueFactory {
-            SimpleStringProperty(bytesToString(it.value.fileSize))
+            it.value.fileSizeProperty
         }
-        /*sizeColumn.setCellValueFactory { row: TableColumn.CellDataFeatures<Download, String> ->
-            SimpleStringProperty(
-                bytesToString(
-                    row.value.fileSize
-                )
-            )
-        }*/
         progressColumn.setCellValueFactory {
             it.value.progress
         }
         dateColumn.setCellValueFactory {
-            SimpleStringProperty(it.value.dateAdded)
+            SimpleStringProperty(Tools.dateFormatted(it.value.dateAdded))
         }
         dateColumn.sortType = TableColumn.SortType.DESCENDING
-        downloadTable.sortOrder.add(dateColumn)
         val dateComparator = Comparator { o1: String?, o2: String? ->
             val sdf = SimpleDateFormat(Tools.dateFormat)
             try {
@@ -149,22 +130,22 @@ class MainController(private val model: Model) : Initializable {
             row.emptyProperty()
                 .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, isEmpty: Boolean? ->
                     if (!isEmpty!!) {
-                        val download = row.item
-                        if (download != null) {
+                        if (row.item != null) {
                             val menu = ContextMenu()
                             val openFolder = MenuItem("Open Folder")
                             openFolder.onAction =
-                                EventHandler { model.openFolder(download.downloadPath, true) }
+                                EventHandler { model.openFolder(row.item.downloadPath, true) }
                             val deleteFile = MenuItem("Delete File")
                             deleteFile.onAction = EventHandler {
                                 model.showConfirm("Do you wish to delete this file?") {
-                                    if (download.isDownloading) {
+                                    if (row.item.downloading || row.item.queued) {
                                         model.toast("You can't delete videos that are being downloaded.")
                                         return@showConfirm
                                     }
-                                    val file = File(download.downloadPath)
-                                    if (file.exists()) {
+                                    val file = row.item.downloadFile()
+                                    if (file != null && file.exists()) {
                                         if (file.delete()) {
+                                            model.removeDownload(row.item)
                                             model.showMessage("Success", "Successfully deleted this episode.")
                                         } else {
                                             model.showError("Unable to delete this file. No error thrown. Most likely folder permission issues.")
@@ -176,53 +157,52 @@ class MainController(private val model: Model) : Initializable {
                             }
                             val removeFromList = MenuItem("Remove From List")
                             removeFromList.onAction = EventHandler {
-                                if (download.isDownloading) {
+                                if (row.item.downloading || row.item.queued) {
                                     model.toast("You can't remove downloads that are being downloaded.")
                                     return@EventHandler
                                 }
-                                model.removeDownload(download)
+                                model.removeDownload(row.item)
                             }
                             val resumeDownload = MenuItem("Resume Download")
                             resumeDownload.onAction = EventHandler {
-                                if (download.isComplete) {
+                                if (row.item.isComplete) {
                                     model.toast("This download is completed. You can't resume it.")
                                     return@EventHandler
                                 }
                                 if (model.isRunning) {
-                                    if (model.linkUrls.contains(fixOldLink(download.episode.link))) {
-                                        model.toast("This download is already in queue.")
-                                        return@EventHandler
+                                    if (model.addEpisodeToQueue(row.item)) {
+                                        model.toast("Successfully added episode to current queue.")
+                                    } else {
+                                        model.toast("This episode is already in queue.")
                                     }
-                                    model.getLinks().add(download.episode)
-                                    model.toast("Successfully added ${download.episode.name} to current queue.")
                                 } else {
-                                    urlSubmission.text = fixOldLink(download.episode.link)
+                                    urlSubmission.text = fixOldLink(row.item.link)
                                     start()
-                                    model.toast("Launched video downloader for: ${download.episode.name}")
+                                    model.toast("Launched video downloader for: ${row.item.name}")
                                 }
                             }
                             val openDownloadUrl = MenuItem("Open Download URL")
                             openDownloadUrl.onAction = EventHandler {
                                 model.showLinkPrompt(
-                                    fixOldLink(download.episode.link), true
+                                    fixOldLink(row.item.link), true
                                 )
                             }
                             val copyDownloadUrl = MenuItem("Copy Download URL")
                             copyDownloadUrl.onAction = EventHandler {
                                 model.showCopyPrompt(
-                                    fixOldLink(download.episode.link), false
+                                    fixOldLink(row.item.link), false
                                 )
                             }
                             val seriesDetails = MenuItem("Series Details")
                             seriesDetails.onAction = EventHandler {
                                 model.openSeriesDetails(
-                                    fixOldLink(download.episode.seriesLink)
+                                    fixOldLink(row.item.seriesLink)
                                 )
                             }
                             val copySeriesLink = MenuItem("Copy Series Lihk")
                             copySeriesLink.onAction = EventHandler {
                                 model.showCopyPrompt(
-                                    fixOldLink(download.episode.seriesLink),
+                                    fixOldLink(row.item.seriesLink),
                                     false
                                 )
                             }
@@ -232,9 +212,11 @@ class MainController(private val model: Model) : Initializable {
                                     model.showError("You can't download a series while the downloader is running.")
                                     return@EventHandler
                                 }
-                                model.urlTextField.text = download.episode.seriesLink
+                                model.urlTextField.text = row.item.seriesLink
                                 model.start()
-                                model.toast("Successfully launched video downloader for: ${download.episode.seriesLink}")
+                                //model.toast(
+                                  //  "Successfully launched video downloader for: ${row.item.seriesLink}"
+                                //)
                             }
                             val pauseDownload = MenuItem("Pause Download")
                             pauseDownload.onAction = EventHandler {
@@ -245,7 +227,7 @@ class MainController(private val model: Model) : Initializable {
                                 try {
                                     if (Desktop.isDesktopSupported()) {
                                         model.taskScope.launch {
-                                            Desktop.getDesktop().open(download.downloadFile)
+                                            Desktop.getDesktop().open(row.item.downloadFile())
                                         }
                                     } else {
                                         model.toast("Desktop is not supported.")
@@ -264,29 +246,29 @@ class MainController(private val model: Model) : Initializable {
                                 openDownloadUrl,
                                 copyDownloadUrl
                             )
-                            if (!download.episode.seriesLink.isNullOrEmpty()) {
+                            if (!row.item.seriesLink.isNullOrEmpty()) {
                                 menu.items.add(seriesDetails)
                                 menu.items.add(copySeriesLink)
                                 menu.items.add(downloadSeries)
                             }
-                            if (download.isDownloading && !download.isComplete) {
+                            if ((row.item.downloading || row.item.queued) && !row.item.isComplete) {
                                 menu.items.add(0, pauseDownload)
                             }
-                            if (!download.isDownloading && !download.isComplete) {
+                            if (!row.item.downloading &&!row.item.queued && !row.item.isComplete) {
                                 menu.items.add(0, resumeDownload)
                             }
-                            if (!download.isDownloading && download.isComplete) {
+                            if (!row.item.downloading && !row.item.queued && row.item.isComplete) {
                                 menu.items.add(0, play)
                             }
-                            if (!download.isDownloading) {
+                            if (!row.item.downloading && !row.item.queued) {
                                 menu.items.add(removeFromList)
                             }
-                            if (download.isComplete && !download.isDownloading) {
+                            if (row.item.isComplete && !row.item.downloading && !row.item.queued) {
                                 menu.items.add(deleteFile)
                             }
                             row.contextMenu = menu
                             row.onMouseClicked = EventHandler { event: MouseEvent ->
-                                if (model.settings().getBoolean(Defaults.SHOWCONTEXTONCLICK)) {
+                                if (model.settings().booleanSetting(Defaults.SHOWCONTEXTONCLICK)) {
                                     menu.show(model.mainStage, event.screenX, event.screenY)
                                 }
                             }
@@ -295,27 +277,38 @@ class MainController(private val model: Model) : Initializable {
                 }
             row
         }
-        model.setTableView(downloadTable)
+        model.setTableView(downloadTable, dateColumn)
         model.taskScope.launch {
             model.updateManager.checkForUpdates(prompt = false, refresh = true)
         }
+        model.mainStage = mainStage
+        mainStage.widthProperty()
+            .addListener { _: ObservableValue<out Number?>?, _: Number?, _: Number? ->
+                downloadTable.refresh()
+            }
+        val downloadFolder = File(model.settings().stringSetting(Defaults.SAVEFOLDER))
+        if (!downloadFolder.canWrite()) {
+            println(
+                """
+    Your download folder doesn't allow write permissions.
+    If this is a USB or SD Card then disable write protection.
+    Try selecting a folder in the user or home folder. Those are usually not restricted.
+    """.trimIndent()
+            )
+            println("Your download folder has been reset to the default.")
+            model.settings().setSetting(Defaults.SAVEFOLDER, Defaults.SAVEFOLDER.value)
+        }
     }
 
-    private var historyStage: Stage? = null
+    private var historyStage: Stage = Stage()
 
     private fun openHistory() {
-        if (historyStage == null) {
-            historyStage = Stage()
-            historyStage!!.initModality(Modality.APPLICATION_MODAL)
-            historyStage!!.initOwner(model.mainStage)
-            historyStage!!.title = "Series Download History"
-            val icon = Main::class.java.getResourceAsStream(Model.SETTINGS_ICON)
-            if (icon != null) {
-                historyStage!!.icons.add(Image(icon))
-            }
-            historyStage!!.isResizable = true
-            historyStage!!.initStyle(StageStyle.DECORATED)
+        historyStage.title = "Series Download History"
+        val icon = Main::class.java.getResourceAsStream(Model.SETTINGS_ICON)
+        if (icon != null) {
+            historyStage.icons.add(Image(icon))
         }
+        historyStage.isResizable = true
         val loader = FXMLLoader(Main::class.java.getResource(Model.FX_PATH + "history.fxml"))
         loader.controllerFactory = Callback { controllerType: Class<*> ->
             try {
@@ -340,10 +333,10 @@ class MainController(private val model: Model) : Initializable {
                     Model.CSS_PATH + "contextmenu.css"
                 )?.toString() ?: ""
             )
-            historyStage!!.toFront()
-            historyStage!!.scene = scene
-            historyStage!!.sizeToScene()
-            historyStage!!.showAndWait()
+            historyStage.toFront()
+            historyStage.scene = scene
+            historyStage.sizeToScene()
+            historyStage.show()
         } catch (e: IOException) {
             e.printStackTrace()
             println("Failed to load history window. Error: ${e.localizedMessage}")
@@ -387,50 +380,102 @@ class MainController(private val model: Model) : Initializable {
         model.stop()
     }
 
+    fun setupHotKeys() {
+        model.mainStage.scene.addEventFilter(KeyEvent.KEY_PRESSED, object : EventHandler<KeyEvent> {
+            val settings: KeyCombination = KeyCodeCombination(
+                KeyCode.S,
+                KeyCombination.CONTROL_DOWN
+            )
+            val history: KeyCombination = KeyCodeCombination(
+                KeyCode.H,
+                KeyCombination.CONTROL_DOWN
+            )
+            val downloadFolder: KeyCombination = KeyCodeCombination(
+                KeyCode.F,
+                KeyCombination.CONTROL_DOWN
+            )
+            val wco: KeyCombination = KeyCodeCombination(
+                KeyCode.W,
+                KeyCombination.CONTROL_DOWN
+            )
+
+
+            override fun handle(ke: KeyEvent) {
+                if (settings.match(ke)) {
+                    model.openSettings()
+                } else if (wco.match(ke)) {
+                    model.openWco()
+                } else if (history.match(ke)) {
+                    openHistory()
+                } else if (downloadFolder.match(ke)) {
+                    openDownloadFolder()
+                }
+                ke.consume()
+            }
+        })
+        //println("Hotkeys have been set up.")
+    }
+
+    private fun openDownloadFolder() {
+        if (Desktop.isDesktopSupported()) {
+            if (model.settings().stringSetting(Defaults.SAVEFOLDER).isNotEmpty()) {
+                val f = File(model.settings().stringSetting(Defaults.SAVEFOLDER))
+                Desktop.getDesktop().open(f)
+            } else {
+                model.showError(
+                    "Your download folder doesn't exist.",
+                    "Be sure to set it inside the settings before downloading videos."
+                )
+                model.openSettings(0)
+            }
+        } else {
+            model.showError("Desktop is not supported on your OS.")
+        }
+    }
+
     @FXML
     @Throws(IOException::class)
     fun handleClicks(event: ActionEvent) {
-        val src = event.source
-        if (src == openSettings) {
-            model.openSettings()
-        } else if (src == openDownloadHistory) {
-            openHistory()
-        } else if (src == openDownloadFolder) {
-            if (Desktop.isDesktopSupported()) {
-                if (!StringChecker.isNullOrEmpty(model.settings().getString(Defaults.SAVEFOLDER))) {
-                    val f = File(model.settings().getString(Defaults.SAVEFOLDER))
-                    Desktop.getDesktop().open(f)
-                } else {
-                    model.showError(
-                        "Your download folder doesn't exist.",
-                        "Be sure to set it inside the settings before downloading videos."
-                    )
-                    model.openSettings(0)
+        when (event.source) {
+            openSettings -> {
+                model.openSettings()
+            }
+            openDownloadHistory -> {
+                openHistory()
+            }
+            openWcoSeries -> {
+                model.openWco()
+            }
+            openDownloadFolder -> {
+                openDownloadFolder()
+            }
+            about -> {
+                model.showMessage(
+                    "About",
+                    "This is a FREE open source program to download videos from ${Model.WEBSITE}. That's all. :)" +
+                            "\nAuthor Discord: I don't have discord anymore. Contact me on Github." +
+                            "\nGithub: https://github.com/NobilityDeviant/" +
+                            "\nTo use this program you must first install a browser like: " +
+                            "\nGoogle Chrome, Chromium, Opera, Edge, Firefox or Safari." +
+                            "\nYou can choose any listed browser in the settings. Everything else should be handled automatically." +
+                            "\nYou find an episode or series link at ${Model.WEBSITE} and paste it into the field. The default settings should be enough for most people." +
+                            "\nIf you have any issues, please create an issue on Github."
+                )
+            }
+            updates -> {
+                if (model.settings().booleanSetting(Defaults.DENIEDUPDATE)) {
+                    model.settings().setSetting(Defaults.DENIEDUPDATE, false)
                 }
-            } else {
-                model.showError("Desktop is not supported on your OS.")
+                model.taskScope.launch {
+                    model.updateManager.checkForUpdates(prompt = true, refresh = true)
+                }
             }
-        } else if (src == about) {
-            model.showMessage(
-                "About", """This is a FREE open source program to download videos from ${Model.WEBSITE}. That's all. :) 
-Author Discord: I don't have discord anymore. Contact me on Github.
-Github: https://github.com/NobilityDeviant/
-To use this program you must first install Google Chrome, Chromium, Opera, Edge, Firefox or Safari. You can choose any browser in the settings. Everything else should be handled automatically.
-You find an episode or series link at ${Model.WEBSITE} and paste it into the field. The default settings should be enough for most people.
-If you have any issues, please create an issue on Github."""
-            )
-        } else if (src == updates) {
-            if (model.settings().getBoolean(Defaults.DENIEDUPDATE)) {
-                model.settings().setBoolean(Defaults.DENIEDUPDATE, false)
-                model.saveSettings()
+            openWebsite -> {
+                model.showLinkPrompt(Model.WEBSITE, true)
             }
-            model.taskScope.launch {
-                model.updateManager.checkForUpdates(prompt = true, refresh = true)
+            openGithub -> {
+                model.showLinkPrompt(Model.GITHUB, true)
             }
-        } else if (src == openWebsite) {
-            model.showLinkPrompt(Model.WEBSITE, true)
-        } else if (src == openGithub) {
-            model.showLinkPrompt(Model.GITHUB, true)
         }
     }
 }

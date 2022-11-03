@@ -25,13 +25,14 @@
          <menus>
             <Menu mnemonicParsing="false" text="File">
                <items>
-                  <MenuItem fx:id="openDownloadFolder" mnemonicParsing="false" onAction="#handleClicks" text="Open Download Folder" />
-                  <MenuItem fx:id="openDownloadHistory" mnemonicParsing="false" onAction="#handleClicks" text="Show Series Download History" />
+                  <MenuItem fx:id="openDownloadFolder" mnemonicParsing="false" onAction="#handleClicks" text="Open Download Folder (CTRL + F)" />
+                  <MenuItem fx:id="openDownloadHistory" mnemonicParsing="false" onAction="#handleClicks" text="Show Series Download History (CTRL + H)" />
+                  <MenuItem fx:id="openWcoSeries" mnemonicParsing="false" onAction="#handleClicks" text="Show All Series (CTRL + W)" />
                </items>
             </Menu>
             <Menu mnemonicParsing="false" text="Settings">
                <items>
-                  <MenuItem fx:id="openSettings" mnemonicParsing="false" onAction="#handleClicks" text="Open Settings" />
+                  <MenuItem fx:id="openSettings" mnemonicParsing="false" onAction="#handleClicks" text="Open Settings (CTRL + S)" />
                </items>
             </Menu>
             <Menu mnemonicParsing="false" text="Help">

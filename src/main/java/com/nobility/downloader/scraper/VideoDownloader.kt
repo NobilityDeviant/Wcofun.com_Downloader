@@ -2,11 +2,11 @@ package com.nobility.downloader.scraper
 
 import com.nobility.downloader.DriverBase
 import com.nobility.downloader.Model
-import com.nobility.downloader.cache.Episode
-import com.nobility.downloader.downloads.Download
 import com.nobility.downloader.downloads.DownloadUpdater
+import com.nobility.downloader.entities.Download
+import com.nobility.downloader.entities.Episode
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.utils.Tools.dateFormatted
+import com.nobility.downloader.utils.Tools.fixTitle
 import kotlinx.coroutines.*
 import org.openqa.selenium.By
 import org.openqa.selenium.support.ui.ExpectedConditions
@@ -16,62 +16,87 @@ import java.net.URL
 import java.time.Duration
 import javax.net.ssl.HttpsURLConnection
 
+class VideoDownloader(model: Model) : DriverBase(model) {
 
-class VideoDownloader(model: Model, private val path: String) : DriverBase(model) {
-
-    private var episode: Episode? = null
+    private var currentEpisode: Episode? = null
     private var currentDownload: Download? = null
+    private val download: Download get() {
+        return currentDownload!!
+    }
+    private val episode: Episode get() {
+        return currentEpisode!!
+    }
     private var retries = 0
     private val taskScope = CoroutineScope(Dispatchers.Default)
 
     suspend fun run() = withContext(Dispatchers.IO) {
         while (model.isRunning) {
-            if (model.settings().getInteger(Defaults.MAXEPISODES) != 0) {
-                if (model.downloadsFinishedForSession >= model.settings().getInteger(Defaults.MAXEPISODES)) {
-                    println(
-                        "Finished downloading max links: " + model.settings()
-                            .getInteger(Defaults.MAXEPISODES) + " Thread stopped."
-                    )
-                    break
-                }
-            }
             if (retries >= 10) {
-                episode = null
+                currentEpisode = null
                 retries = 0
                 continue
             }
-            if (episode == null) {
-                episode = model.nextLink
-                if (episode == null) {
+            if (currentEpisode == null) {
+                currentEpisode = model.nextLink
+                if (currentEpisode == null) {
                     break
                 }
+                retries = 0
             }
-            val url = episode!!.link
-            if (url.isNullOrEmpty()) {
-                println("Skipping episode (" + episode!!.name + ") with no link.")
-                episode = null
+            val link = episode.link
+            if (link.isNullOrEmpty()) {
+                println("Skipping episode (" + episode.name + ") with no link.")
+                currentEpisode = null
                 continue
             }
-            val save = File(
-                path + File.separator
-                        + episode!!.name + ".mp4"
-            )
-            currentDownload = model.getDownloadForUrl(url)
-            if (currentDownload != null) {
-                if (currentDownload!!.isComplete) {
-                    println("Skipping completed video: " + episode!!.name)
-                    currentDownload!!.downloadPath = save.absolutePath
-                    currentDownload!!.isDownloading = false
-                    currentDownload!!.isQueued = false
-                    model.updateDownload(currentDownload!!)
-                    episode = null
-                    continue
-                } else {
-                    currentDownload!!.isQueued = true
-                    currentDownload!!.updateProgress()
+            model.incrementDownloadsInProgress()
+            var series = model.settings().seriesForLink(episode.seriesLink)
+            if (series == null) {
+                series = model.settings().wcoHandler.seriesForLink(episode.seriesLink)
+                if (series == null) {
+                    println("Failed to find series for episode: ${episode.name}. Unable to create save folder.")
                 }
             }
-            driver.get(url)
+            val downloadFolderPath = model.settings().stringSetting(Defaults.SAVEFOLDER)
+            var saveFolder = File(downloadFolderPath + File.separator
+                    + if (series != null) fixTitle(series.name, true) else "")
+            if (!saveFolder.exists()) {
+                if (!saveFolder.mkdir()) {
+                    println(
+                        "Unable to create series save folder: ${saveFolder.absolutePath} " +
+                                "Defaulting to $downloadFolderPath"
+                    )
+                    saveFolder = File(downloadFolderPath + File.separator)
+                }
+            }
+            val saveFile = File(
+                 saveFolder.absolutePath + File.separator
+                        + fixTitle(episode.name, true) + ".mp4"
+            )
+            currentDownload = model.settings().downloadForLink(link)
+            if (currentDownload != null) {
+                if (download.downloadPath.isNullOrEmpty()
+                    || !File(download.downloadPath).exists()
+                    || download.downloadPath != saveFile.absolutePath) {
+                    download.downloadPath = saveFile.absolutePath
+                }
+                model.addDownload(download)
+                if (download.isComplete) {
+                    println("[DB] Skipping completed video: " + episode.name)
+                    download.downloading = false
+                    download.queued = false
+                    model.updateDownloadInDatabase(download, true)
+                    currentEpisode = null
+                    model.decrementDownloadsInProgress()
+                    continue
+                } else {
+                    download.queued = true
+                    model.updateDownloadFileSize(download)
+                    model.updateDownloadProgress(download)
+                }
+            }
+            driver.get(link)
+            delay(2000)
             var flag = -1
             if (driver.pageSource.contains("anime-js-0")) {
                 flag = 0
@@ -81,8 +106,8 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
                 flag = 2
             }
             if (flag == -1) {
-                println("Skipping... Failed to find video component for: $url")
-                episode = null
+                println("Retrying... Failed to find video component for: $link")
+                model.decrementDownloadsInProgress()
                 continue
             }
             val wait = WebDriverWait(driver, Duration.ofSeconds(30))
@@ -96,8 +121,9 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
                         }
                     )))
             } catch (e: Exception) {
-                println("Error waiting for $url to load. Retrying...")
+                println("Error waiting for $link to load. Retrying...")
                 retries++
+                model.decrementDownloadsInProgress()
                 continue
             }
             val videoPlayer =
@@ -109,8 +135,9 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
                     }
                 ))
             if (videoPlayer == null || !videoPlayer.isDisplayed) {
-                println("Failed to find the video player for $url. Retrying...")
+                println("Failed to find the video player for $link. Retrying...")
                 retries++
+                model.decrementDownloadsInProgress()
                 continue
             }
             val frameLink = videoPlayer.getAttribute("src")
@@ -119,8 +146,9 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
                 wait.pollingEvery(Duration.ofSeconds(3))
                     .until(ExpectedConditions.visibilityOfElementLocated(By.className("vjs-big-play-button")))
             } catch (e: Exception) {
-                println("Error waiting for frame video to load for $url. Retrying...")
+                println("Error waiting for frame video to load for $link. Retrying...")
                 retries++
+                model.decrementDownloadsInProgress()
                 continue
             }
             val video = driver.findElement(By.className("vjs-big-play-button"))
@@ -131,63 +159,66 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
             try {
                 if (currentDownload == null) {
                     currentDownload = Download(
-                        save.absolutePath, dateFormatted, episode!!
+                        saveFile.absolutePath,
+                        episode.name,
+                        episode.link,
+                        episode.seriesLink,
+                        0L,
+                        System.currentTimeMillis(),
                     )
-                    currentDownload!!.isQueued = true
-                    currentDownload!!.updateProgress()
-                    model.addDownload(currentDownload!!)
-                } /*else if (episode!!.name != currentDownload!!.name) {
-                    currentDownload = Download(
-                        save.absolutePath, dateFormatted, episode
-                    )
-                    currentDownload!!.isQueued = true
-                    currentDownload!!.updateProgress()
-                    model.addDownload(currentDownload!!)
-                }*/
+                    download.queued = true
+                    model.addDownload(download)
+                }
                 val originalFileSize = fileSize(URL(videoLink))
-                if (originalFileSize <= -1) {
-                    println("Retrying... Error: Failed to determine file size for: " + episode!!.name)
+                if (originalFileSize <= 5000) {
+                    println("Retrying... Error: Failed to determine file size for: " + currentEpisode!!.name)
                     retries++
+                    model.decrementDownloadsInProgress()
                     continue
                 }
-                if (save.exists()) {
-                    if (save.length() >= originalFileSize) {
-                        println("Skipping completed video: " + episode!!.name)
-                        currentDownload!!.downloadPath = save.absolutePath
-                        currentDownload!!.fileSize = originalFileSize
-                        currentDownload!!.isDownloading = false
-                        currentDownload!!.isQueued = false
-                        model.updateDownload(currentDownload!!)
-                        model.tableView.refresh()
-                        episode = null
+                if (saveFile.exists()) {
+                    if (saveFile.length() >= originalFileSize) {
+                        println("[IO] Skipping completed video: " + episode.name)
+                        download.downloadPath = saveFile.absolutePath
+                        download.fileSize = originalFileSize
+                        download.downloading = false
+                        download.queued = false
+                        model.updateDownloadInDatabase(download, true)
+                        currentEpisode = null
+                        model.decrementDownloadsInProgress()
                         continue
                     }
                 } else {
-                    save.createNewFile()
+                    saveFile.createNewFile()
                 }
-                println("Downloading: " + episode!!.name)
-                currentDownload!!.isQueued = false
-                currentDownload!!.isDownloading = true
-                currentDownload!!.fileSize = originalFileSize
-                model.updateDownload(currentDownload!!)
-                model.tableView.refresh()
-                downloadFile(URL(videoLink), save)
-                if (save.exists() && save.length() >= originalFileSize) {
+                println("Downloading: " + download.name)
+                download.queued = false
+                download.downloading = true
+                download.fileSize = originalFileSize
+                model.addDownload(download)
+                model.updateDownloadInDatabase(download, true)
+                downloadFile(URL(videoLink), saveFile)
+                download.downloading = false
+                //second time to ensure ui update
+                model.updateDownloadInDatabase(download, true)
+                if (saveFile.exists() && saveFile.length() >= originalFileSize) {
                     model.incrementDownloadsFinished()
-                    println("Successfully downloaded: " + episode!!.name)
-                    episode = null
+                    println("Successfully downloaded: " + download.name)
+                    currentEpisode = null
                 }
             } catch (e: IOException) {
-                currentDownload!!.isQueued = true
-                currentDownload!!.isDownloading = false
-                model.updateDownload(currentDownload!!)
+                download.queued = true
+                download.downloading = false
+                model.updateDownloadInDatabase(download, true)
+                //model.updateDownloadProgress(download)
                 println(
                     """
-    Unable to download $episode
+    Unable to download ${download.name}
     Error: ${e.localizedMessage}
     Reattempting...
     """.trimIndent()
                 )
+                model.decrementDownloadsInProgress()
             }
         }
         killDriver()
@@ -212,8 +243,8 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
         con.addRequestProperty("Sec-Fetch-User", "?1")
         con.addRequestProperty("Upgrade-Insecure-Requests", "1")
         con.addRequestProperty("User-Agent", userAgent)
-        con.connectTimeout = model.settings().getInteger(Defaults.TIMEOUT) * 1000
-        con.readTimeout = model.settings().getInteger(Defaults.TIMEOUT) * 1000
+        con.connectTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
+        con.readTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
         return con.contentLength.toLong()
     }
 
@@ -237,13 +268,13 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
         con.addRequestProperty("Sec-Fetch-User", "?1")
         con.addRequestProperty("Upgrade-Insecure-Requests", "1")
         con.setRequestProperty("Range", "bytes=$offset-")
-        con.connectTimeout = model.settings().getInteger(Defaults.TIMEOUT) * 1000
-        con.readTimeout = model.settings().getInteger(Defaults.TIMEOUT) * 1000
+        con.connectTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
+        con.readTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
         con.addRequestProperty("User-Agent", userAgent)
         //todo check for file space
         val completeFileSize = con.contentLength + offset //TODO might timeout, check for that
         if (offset != 0L) {
-            println("Detected incomplete video: " + episode!!.name + " - Attempting to finish it.")
+            println("Detected incomplete video: " + download.name + " - Attempting to finish it.")
         }
         val buffer = ByteArray(2048)
         val bis = BufferedInputStream(con.inputStream)
@@ -251,21 +282,21 @@ class VideoDownloader(model: Model, private val path: String) : DriverBase(model
         val bos = BufferedOutputStream(fos, buffer.size)
         var count: Int
         var total = offset
-        val updater = DownloadUpdater(model, currentDownload!!)
+        val updater = DownloadUpdater(model, download)
         taskScope.launch { updater.run() }
         while (bis.read(buffer, 0, 2048).also { count = it } != -1) {
             if (!model.isRunning) {
-                println("Stopping video download at " + total + "/" + completeFileSize + " - " + episode!!.name)
+                println("Stopping video download at "
+                        + total + "/" + completeFileSize + " - " + download.name)
                 break
             }
             total += count.toLong()
             bos.write(buffer, 0, count)
         }
         updater.setRunning(false)
-        currentDownload!!.isDownloading = false
-        model.updateDownload(currentDownload!!)
         bos.flush()
         bos.close()
+        fos.flush()
         fos.close()
         bis.close()
         con.disconnect()

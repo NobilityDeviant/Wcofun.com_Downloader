@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="670.0" prefWidth="1052.0" style="-fx-background-color: #454B90;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.wco.WcoController">
+   <center>
+      <TableView fx:id="seriesTable" prefHeight="474.0" prefWidth="1052.0" stylesheets="@../css/tableview.css" BorderPane.alignment="CENTER">
+        <columns>
+          <TableColumn fx:id="coverColumn" prefWidth="187.0" sortable="false" text="Cover" />
+          <TableColumn fx:id="nameColumn" prefWidth="251.0" text="Name" />
+            <TableColumn fx:id="descriptionColumn" prefWidth="236.0" sortable="false" text="Description" />
+            <TableColumn fx:id="genresColumn" prefWidth="168.0" text="Genres" />
+            <TableColumn fx:id="identityColumn" prefWidth="103.0" text="Type" />
+            <TableColumn fx:id="episodesColumn" prefWidth="106.0" text="Episodes" />
+        </columns>
+      </TableView>
+   </center>
+   <bottom>
+      <VBox alignment="TOP_CENTER" BorderPane.alignment="CENTER">
+         <children>
+            <HBox alignment="CENTER" stylesheets="@../css/button.css">
+               <children>
+                  <Button fx:id="recentButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefWidth="130.0" text="Recently Added" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button fx:id="dubbedButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefWidth="100.0" text="Dubbed" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button fx:id="subbedButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefWidth="100.0" text="Subbed" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button fx:id="cartoonButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefWidth="100.0" text="Cartoons" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button fx:id="movieButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefWidth="100.0" text="Movies" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button fx:id="uncategorizedButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#switchPage" prefHeight="33.0" prefWidth="124.0" text="Uncategorized" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="5.0" right="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+               </children>
+            </HBox>
+            <HBox fx:id="buttonHbox" alignment="CENTER" prefWidth="200.0" stylesheets="@../css/button.css">
+               <children>
+                  <TextField fx:id="searchTextField" prefHeight="31.0" prefWidth="441.0" stylesheets="@../css/textfield.css">
+                     <HBox.margin>
+                        <Insets bottom="30.0" top="20.0" />
+                     </HBox.margin>
+                  </TextField>
+                  <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#search" text="Search" textAlignment="CENTER">
+                     <HBox.margin>
+                        <Insets bottom="30.0" left="5.0" top="20.0" />
+                     </HBox.margin>
+                  </Button>
+               </children>
+            </HBox>
+            <Label fx:id="resultsLabel" text="0 results found" textFill="WHITE">
+               <VBox.margin>
+                  <Insets bottom="20.0" />
+               </VBox.margin>
+            </Label>
+         </children>
+      </VBox>
+   </bottom>
+</BorderPane>

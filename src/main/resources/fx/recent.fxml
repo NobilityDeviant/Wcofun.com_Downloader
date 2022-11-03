@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" prefHeight="858.0" prefWidth="705.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.scraper.RecentController">
+   <children>
+      <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Recent Episodes" textAlignment="CENTER" textFill="WHITE" wrapText="true">
+         <font>
+            <Font name="Arial Black" size="14.0" />
+         </font>
+         <VBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </VBox.margin>
+      </Label>
+      <TableView fx:id="episodesTable" prefHeight="315.0" stylesheets="@../css/tableview.css">
+        <columns>
+          <TableColumn fx:id="episodeImageColumn" prefWidth="175.0" text="Cover" />
+            <TableColumn fx:id="episodeNameColumn" prefWidth="519.0" text="Name" />
+        </columns>
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </TableView>
+      <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Recent Series" textAlignment="CENTER" textFill="WHITE" wrapText="true">
+         <font>
+            <Font name="Arial Black" size="14.0" />
+         </font>
+         <VBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </VBox.margin>
+      </Label>
+      <TableView fx:id="seriesTable" prefHeight="315.0" prefWidth="500.0" stylesheets="@../css/tableview.css">
+         <columns>
+            <TableColumn fx:id="seriesImageColumn" prefWidth="175.0" text="Cover" />
+            <TableColumn fx:id="seriesNameColumn" prefWidth="519.0" text="Name" />
+         </columns>
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </TableView>
+   </children>
+</VBox>

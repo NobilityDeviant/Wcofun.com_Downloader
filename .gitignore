@@ -4,7 +4,9 @@
 /.gradle/
 /gradle/
 /wco website online detection.txt
-/dubbed.txt
 /resources/
 /downloader updates.txt
+/database
+/objectbox-jni-windows-x64.dll
+/objectbox-models
 

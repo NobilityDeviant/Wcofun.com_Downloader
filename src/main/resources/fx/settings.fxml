@@ -6,6 +6,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
@@ -22,25 +23,6 @@
                <center>
                   <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
                      <children>
-                        <HBox>
-                           <children>
-                              <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="170.0" text="Maximum Episodes:" textAlignment="CENTER" textFill="WHITE">
-                                 <HBox.margin>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
-                                 </HBox.margin>
-                              </Label>
-                              <TextField fx:id="fieldMaxEpisodes" prefWidth="50.0">
-                                 <HBox.margin>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
-                                 </HBox.margin>
-                              </TextField>
-                              <CheckBox fx:id="cbNoEpisodeLimit" mnemonicParsing="false" stylesheets="@../css/checkbox.css" text="No Limit" textFill="WHITE">
-                                 <HBox.margin>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
-                                 </HBox.margin>
-                              </CheckBox>
-                           </children>
-                        </HBox>
                         <HBox>
                            <children>
                               <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="170.0" text="Download Threads:" textAlignment="CENTER" textFill="WHITE">
@@ -128,13 +110,26 @@
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
                                  </HBox.margin>
                               </CheckBox>
-                              <CheckBox fx:id="cbSaveEpisodes" mnemonicParsing="false" stylesheets="@../css/checkbox.css" text="Save Episode Links As Text" textFill="WHITE">
-                                 <HBox.margin>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
-                                 </HBox.margin>
-                              </CheckBox>
                            </children>
                         </HBox>
+                        <VBox alignment="TOP_CENTER" prefWidth="100.0">
+                           <children>
+                              <Label text="Toast Transparency" textFill="WHITE">
+                                 <VBox.margin>
+                                    <Insets bottom="5.0" />
+                                 </VBox.margin>
+                              </Label>
+                              <Slider fx:id="toastSlider" stylesheets="@../css/slider.css" value="50.0" />
+                              <Button fx:id="toastButton" mnemonicParsing="false" onAction="#handleClicks" text="Preview Toast">
+                                 <VBox.margin>
+                                    <Insets top="10.0" />
+                                 </VBox.margin>
+                              </Button>
+                           </children>
+                           <VBox.margin>
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                           </VBox.margin>
+                        </VBox>
                         <HBox alignment="CENTER" prefHeight="120.0" prefWidth="678.0">
                            <children>
                               <Button fx:id="buttonSaveSettings" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" prefHeight="40.0" prefWidth="200.0" text="Save Settings" textAlignment="CENTER" />
@@ -181,19 +176,19 @@
                         </Label>
                         <HBox alignment="CENTER" prefHeight="71.0" prefWidth="678.0">
                            <children>
-                              <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" text="View Scraped Data" textAlignment="CENTER">
+                              <Button fx:id="viewScrapedDataButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="View Scraped Data" textAlignment="CENTER">
                                  <HBox.margin>
                                     <Insets right="5.0" />
                                  </HBox.margin>
                               </Button>
-                              <Button fx:id="buttonCheckGenres" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="Recheck Genres" textAlignment="CENTER">
+                              <Button fx:id="checkHistoryForEpisodesButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="Check Series History For New Episodes" textAlignment="CENTER">
                                  <HBox.margin>
                                     <Insets left="5.0" right="5.0" />
                                  </HBox.margin>
                               </Button>
-                              <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" text="Check For New Episodes" textAlignment="CENTER">
+                              <Button fx:id="updateWcoButtonn" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="Update Wco DB" textAlignment="CENTER">
                                  <HBox.margin>
-                                    <Insets left="5.0" />
+                                    <Insets left="5.0" right="5.0" />
                                  </HBox.margin>
                               </Button>
                            </children>
@@ -208,6 +203,11 @@
                               <Button fx:id="buttonStopChrome" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="Stop Chrome Instances" textAlignment="CENTER">
                                  <HBox.margin>
                                     <Insets right="5.0" />
+                                 </HBox.margin>
+                              </Button>
+                              <Button fx:id="devModeButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" text="Developer Mode" textAlignment="CENTER">
+                                 <HBox.margin>
+                                    <Insets left="5.0" right="5.0" />
                                  </HBox.margin>
                               </Button>
                            </children>
