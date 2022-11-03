@@ -27,8 +27,6 @@ Utilizes Kotlin's coroutines for a fast and smooth experience.
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
 
-Will update screenshots on next release.
-
 # Downloads
 
 All past and current downloads will go inside this organized tab here:
@@ -43,6 +41,8 @@ Every download will go inside their respective Series folder as shown in the ima
 
 ![Alt text](images/settings.png?raw=true "Settings Window")
 
+You can now choose the browser you want to use with selenium.
+Be sure to select it before downloading anything. You must have the chosen browser installed.
 You can adjust your settings by going to Settings > Open Settings in the menu bar.
 
 # Series Details
