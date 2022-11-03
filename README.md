@@ -35,7 +35,8 @@ All past and current downloads will go inside this organized tab here:
 
 You can interact with the downloads by using the Action menu buttons.
 
-Every download will go inside their respective Series folder as shown in the image above.
+Every download will go inside their respective Series folder to keep it organized. 
+Just select the main download folder in the settings. The default one is your home folder.
 
 # Settings
 
