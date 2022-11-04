@@ -146,7 +146,15 @@ class DownloadConfirmController(
                 for (i in 1..threads) {
                     tasks.add(
                         launch {
-                            VideoDownloader(model).run()
+                            try {
+                                VideoDownloader(model).run()
+                            } catch (e: Exception) {
+                                if (e.localizedMessage.contains("unknown error: cannot find")) {
+                                    println("VideoDownloader error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
+                                } else {
+                                    println("VideoDownloader error: " + e.localizedMessage)
+                                }
+                            }
                         }
                     )
                 }
@@ -160,6 +168,7 @@ class DownloadConfirmController(
                     model.stop()
                 }
             } catch (e: Exception) {
+                model.stop()
                 println("Download service error: " + e.localizedMessage)
             }
         }

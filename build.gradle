@@ -25,7 +25,7 @@ jar {
     }
     manifest {
         attributes (
-                "Manifest-Version": "1.4.9",
+                "Manifest-Version": "1.5.1",
                 "Main-Class": "com.nobility.downloader.Main"
                 )
     }

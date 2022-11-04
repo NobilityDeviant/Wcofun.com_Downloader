@@ -51,7 +51,10 @@ class Main : Application() {
             primaryStage.icons.add(Image(icon))
         }
         primaryStage.centerOnScreen()
-        primaryStage.onCloseRequest = EventHandler { model.shutdown(false) }
+        primaryStage.onCloseRequest = EventHandler {
+            model.shutdown(false)
+            it.consume()
+        }
         primaryStage.show()
         val controller = loader.getController<MainController>()
         //must set them up here because the scene is null before calling Stage#show

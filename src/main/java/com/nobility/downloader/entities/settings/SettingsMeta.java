@@ -44,7 +44,6 @@ public class SettingsMeta implements Meta {
             setLongValue((Long) value);
         } else if (value instanceof Double) {
             setDoubleValue((Double) value);
-            System.out.println("Set double value: " + value);
         } else if (value instanceof Float) {
             setFloatValue((Float) value);
         } else if (value instanceof Boolean) {

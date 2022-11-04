@@ -403,14 +403,17 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
             override fun handle(ke: KeyEvent) {
                 if (settings.match(ke)) {
                     model.openSettings()
+                    ke.consume()
                 } else if (wco.match(ke)) {
                     model.openWco()
+                    ke.consume()
                 } else if (history.match(ke)) {
                     openHistory()
+                    ke.consume()
                 } else if (downloadFolder.match(ke)) {
                     openDownloadFolder()
+                    ke.consume()
                 }
-                ke.consume()
             }
         })
         //println("Hotkeys have been set up.")

@@ -150,7 +150,7 @@ class UpdateManager(private val model: Model) {
     }
 
     companion object {
-        const val CURRENT_VERSION = "1.5"
+        const val CURRENT_VERSION = "1.5.1"
         const val RELEASES_LINK = "https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases"
     }
 }

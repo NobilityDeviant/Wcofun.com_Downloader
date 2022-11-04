@@ -105,7 +105,11 @@ class BuddyHandler(private val model: Model) {
                     }
                     kill()
                 } catch (e: Exception) {
-                    println("Download service error: " + e.localizedMessage)
+                    if (e.localizedMessage.contains("unknown error: cannot find")) {
+                        println("Download service error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
+                    } else {
+                        println("Download service error: " + e.localizedMessage)
+                    }
                     kill()
                 }
             }
