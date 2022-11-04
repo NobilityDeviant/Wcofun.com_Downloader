@@ -1,4 +1,4 @@
-# Wcofun.com Downloader
+# Wcofun.net Downloader
 
 Used to download videos and series from https://www.wcofun.net/
 
@@ -27,23 +27,59 @@ Utilizes Kotlin's coroutines for a fast and smooth experience.
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
 
-Will update screenshots on next release.
-
 # Downloads
 
 All past and current downloads will go inside this organized tab here:
 
 ![Alt text](images/downloads.png?raw=true "Download Tab")
 
-You can interact with the downloads by using the Action menu buttons.
+You can interact with the downloads by right clicking any entry.
 
-Every download will go inside their respective Series folder as shown in the image above.
+Every download will go inside their respective Series folder to keep it organized. 
+Just select the main download folder in the settings. The default one is your home folder.
 
 # Settings
 
-![Alt text](images/wco_settings.png?raw=true "Settings Window")
+![Alt text](images/settings.png?raw=true "Settings Window")
 
+You can now choose the browser you want to use with selenium.
+Be sure to select it before downloading anything. You must have the chosen browser installed.
 You can adjust your settings by going to Settings > Open Settings in the menu bar.
+
+# Series Details
+
+![Alt text](images/seriesdetails.png?raw=true "Series Details WIndow")
+
+With the new cache system, you don't even need to visit wco to check out a series details!
+
+# Download Confirm
+
+![Alt text](images/downloadconfirm.png?raw=true "Download Confirm Window")
+
+You are now able to select all the episodes inside a series you want to download!
+It feels so much better than the max episodes option.
+
+# WCO Database
+
+![Alt text](images/wco.png?raw=true "WCO Window")
+
+Now as an optional download, you can view ALL the series inside wcofun all from this simple window.
+It has the same categories (minus OVA because it's just in dubbed/subbed) and is so much easier to use.
+You can even use the search bar to filter through a keyword, or genre.
+Why doesn't wco have images next to their links? IDK but that's why I created this.
+
+# Recent
+
+![Alt text](images/recent.png?raw=true "Recent Window")
+
+Now inside the wco window, you can view the latest episodes and series displayed on the wco home page.
+Just as a little QoL feature.
+Right click any entry to see the options.
+
+NOTE: This window isn't very optimized. It can be quite slow due to the big amount of data.
+I suggest not using the columns to sort and only use the search bar. :)
+
+Maybe one day I'll use Compose for the UI.
 
 Enjoy and have fun!
 
