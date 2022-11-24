@@ -90,6 +90,6 @@ Idk why this website has them, but it's best to ignore them for now.
 
 Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
 
-[![PayPal](/images/blue.svg)](https://www.paypal.com/paypalme/nobilitydev)
+#Removed. Will keep this off for now.
 
 
