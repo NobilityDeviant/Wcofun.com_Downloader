@@ -123,7 +123,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                             else -> ""
                         }
                     ))
-                    frame.click()
+                    //frame.click()
                     driver.switchTo().frame(frame)
                     foundVideoFrame = true
                     break
