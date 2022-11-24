@@ -77,6 +77,9 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     @FXML
     private lateinit var updateWcoButtonn: Button
 
+    @FXML
+    private lateinit var cbBypassDiskSpaceCheck: CheckBox
+
     fun executeStartCommand(command: Int) {
         if (command > -1) {
             when (command) {
@@ -89,7 +92,6 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     override fun initialize(location: URL, resources: ResourceBundle?) {
         toastSlider.value = model.settings().doubleSetting(Defaults.TOASTTRANSPARENCY)
         toastSlider.valueProperty().addListener { _: ObservableValue<out Number>?, _: Number, _: Number ->
-            //println("${toastSlider.value}")
             buttonSaveSettings.isDisable = !settingsChanged()
         }
         fieldDownloadThreads.text = model.settings().integerSetting(Defaults.DOWNLOADTHREADS).toString()
@@ -142,6 +144,10 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             }
         cbShowContext.isSelected = model.settings().booleanSetting(Defaults.SHOWCONTEXTONCLICK)
         cbShowContext.selectedProperty()
+            .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, _: Boolean? ->
+                buttonSaveSettings.isDisable = !settingsChanged()
+            }
+        cbBypassDiskSpaceCheck.selectedProperty()
             .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, _: Boolean? ->
                 buttonSaveSettings.isDisable = !settingsChanged()
             }
@@ -417,6 +423,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                 || model.settings().integerSetting(Defaults.TIMEOUT).toString() != fieldTimeout.text
                 || model.settings().stringSetting(Defaults.DRIVER) != choiceBrowser.value
                 || model.settings().doubleSetting(Defaults.TOASTTRANSPARENCY) != toastSlider.value
+                || model.settings().booleanSetting(Defaults.BYPASSFREESPACECHECK) != cbBypassDiskSpaceCheck.isSelected
     }
 
     /**

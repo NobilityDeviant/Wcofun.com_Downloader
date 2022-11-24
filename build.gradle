@@ -25,8 +25,8 @@ jar {
     }
     manifest {
         attributes (
-                "Manifest-Version": "1.5.1",
-                "Main-Class": "com.nobility.downloader.Main"
+                    "Manifest-Version": "1.5.1",
+                    "Main-Class": "com.nobility.downloader.Main"
                 )
     }
 
@@ -38,27 +38,26 @@ jar {
 }
 
 group 'com.nobility'
-version '1.4.9'
+version '1.5.2'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
+    //dont change this version. it fixes a selenium bug
+    //implementation 'com.google.guava:guava:30.1.1-jre'
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.3'
-    implementation group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '4.3.0'
-    implementation 'io.github.bonigarcia:webdrivermanager:5.3.0'
-    implementation 'org.slf4j:slf4j-api:2.0.0'
-    implementation 'org.slf4j:slf4j-simple:2.0.0'
-    //implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation('org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4')
+    implementation 'org.seleniumhq.selenium:selenium-java:4.6.0'
+    //ignore this warning it's not dangerous
+    implementation 'io.github.bonigarcia:webdrivermanager:5.3.1'
+    implementation 'org.slf4j:slf4j-api:2.0.4'
+    implementation 'org.slf4j:slf4j-simple:2.0.4'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
     implementation group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-javafx', version: '1.6.3'
-
     implementation("io.objectbox:objectbox-linux:$objectboxVersion")
     implementation("io.objectbox:objectbox-macos:$objectboxVersion")
     implementation("io.objectbox:objectbox-windows:$objectboxVersion")
-    // Since 2.9.0 we also provide ARM support for the Linux library
     implementation("io.objectbox:objectbox-linux-arm64:$objectboxVersion")
     implementation("io.objectbox:objectbox-linux-armv7:$objectboxVersion")
 }

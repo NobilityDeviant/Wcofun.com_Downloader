@@ -6,7 +6,7 @@ import kotlinx.coroutines.delay
 
 class DownloadUpdater(private val model: Model, private val download: Download) {
 
-    private var running = true
+    var running = true
 
     suspend fun run() {
         while (running) {
@@ -14,9 +14,5 @@ class DownloadUpdater(private val model: Model, private val download: Download) 
             delay(500)
         }
         model.updateDownloadProgress(download)
-    }
-
-    fun setRunning(running: Boolean) {
-        this.running = running
     }
 }

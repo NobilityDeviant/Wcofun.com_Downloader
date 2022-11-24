@@ -111,7 +111,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
             it.value.progress
         }
         dateColumn.setCellValueFactory {
-            SimpleStringProperty(Tools.dateFormatted(it.value.dateAdded))
+            it.value.dateProperty
         }
         dateColumn.sortType = TableColumn.SortType.DESCENDING
         val dateComparator = Comparator { o1: String?, o2: String? ->

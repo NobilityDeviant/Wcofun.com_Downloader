@@ -17,6 +17,7 @@ import org.openqa.selenium.safari.SafariDriver
 import org.openqa.selenium.safari.SafariOptions
 import java.time.Duration
 
+
 abstract class DriverBase {
 
     protected lateinit var model: Model
@@ -68,7 +69,8 @@ abstract class DriverBase {
             chromeOptions.addArguments("enable-automation")
             chromeOptions.addArguments("--mute-audio")
             chromeOptions.addArguments("user-agent=$userAgent")
-            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()) {
+            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()
+                && model.settings().booleanSetting(Defaults.ENABLEPROXY)) {
                 chromeOptions.addArguments("--proxy-server=" + model.settings().stringSetting(Defaults.PROXY))
             }
             _driver = if (driverDefaults == DriverDefaults.EDGE) {
@@ -83,7 +85,8 @@ abstract class DriverBase {
                 //edgeOptions.addArguments("enable-automation");
                 edgeOptions.addArguments("--mute-audio")
                 edgeOptions.addArguments("--user-agent=$userAgent")
-                if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()) {
+                if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()
+                    && model.settings().booleanSetting(Defaults.ENABLEPROXY)) {
                     edgeOptions.addArguments(
                         "--proxy-server=" + model.settings().stringSetting(Defaults.PROXY)
                     )
@@ -97,7 +100,8 @@ abstract class DriverBase {
             val profile = FirefoxProfile()
             profile.setPreference("media.volume_scale", "0.0")
             profile.setPreference("general.useragent.override", userAgent)
-            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()) {
+            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()
+                && model.settings().booleanSetting(Defaults.ENABLEPROXY)) {
                 //not sure if this works
                 val proxy = Proxy()
                 proxy.isAutodetect = true
@@ -110,7 +114,8 @@ abstract class DriverBase {
             _driver = FirefoxDriver(firefoxOptions)
         } else if (driverDefaults == DriverDefaults.SAFARI) {
             //not sure if user agent is changable
-            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()) {
+            if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()
+                && model.settings().booleanSetting(Defaults.ENABLEPROXY)) {
                 val proxy = Proxy()
                 proxy.isAutodetect = true
                 proxy.httpProxy = model.settings().stringSetting(Defaults.PROXY)
@@ -159,7 +164,6 @@ abstract class DriverBase {
         try {
             if (_driver != null) {
                 model.runningDrivers.remove(driver)
-                driver.close()
                 driver.quit()
             }
         } catch (ignored: Exception) {

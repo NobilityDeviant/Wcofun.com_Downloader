@@ -24,10 +24,13 @@ public class Download extends Episode {
     public StringProperty progress;
     @Transient
     public StringProperty fileSizeProperty;
+    @Transient
+    public StringProperty dateProperty;
 
     public Download() {
         progress = new SimpleStringProperty("0%");
         fileSizeProperty = new SimpleStringProperty("0KB");
+        dateProperty = new SimpleStringProperty("");
     }
 
     public Download(
@@ -46,6 +49,7 @@ public class Download extends Episode {
         this.dateAdded = dateAdded;
         progress = new SimpleStringProperty("0%");
         fileSizeProperty = new SimpleStringProperty("0KB");
+        dateProperty = new SimpleStringProperty("");
     }
 
     public void update(Download download, boolean updateProperties) {
@@ -57,6 +61,7 @@ public class Download extends Episode {
         if (updateProperties) {
             updateFileSizeProperty();
             updateProgress();
+            updateDateProperty();
         }
     }
 
@@ -67,6 +72,11 @@ public class Download extends Episode {
 
     public void updateFileSizeProperty() {
         fileSizeProperty.setValue(Tools.bytesToString(fileSize));
+
+    }
+
+    public void updateDateProperty() {
+        dateProperty.setValue(Tools.dateFormatted(dateAdded));
     }
 
     public void updateProgress() {

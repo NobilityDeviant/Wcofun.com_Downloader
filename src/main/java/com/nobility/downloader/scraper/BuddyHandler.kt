@@ -22,18 +22,19 @@ class BuddyHandler(private val model: Model) {
 
     suspend fun update(url: String) {
         this.url = url
+        println("Launching BuddyHandler to handle the link(s).")
         //all series links contains this key
         if (url.contains("/anime/")) {
             val cachedSeries = model.settings().wcoHandler.seriesForLink(url)
             if (cachedSeries != null) {
                 series = cachedSeries
-                println("Found cache series. Using that data instead.")
+                //println("Found cache series. Using that data instead.")
                 return
             } else {
                 val downloadSeries = model.settings().seriesForLink(url)
                 if (downloadSeries != null) {
                     series = downloadSeries
-                    println("Found recently downloaded series. Using that data instead.")
+                    //println("Found recently downloaded series. Using that data instead.")
                     return
                 }
             }
@@ -95,9 +96,10 @@ class BuddyHandler(private val model: Model) {
                     kill()
                 }
             } else {
+                val downloader = VideoDownloader(model)
                 try {
                     model.episodes.add(episode!!)
-                    VideoDownloader(model).run()
+                    downloader.run()
                     if (model.downloadsFinishedForSession > 0) {
                         println("Gracefully finished downloading all files.")
                     } else {
@@ -105,6 +107,8 @@ class BuddyHandler(private val model: Model) {
                     }
                     kill()
                 } catch (e: Exception) {
+                    downloader.killDriver()
+                    downloader.taskScope.cancel()
                     if (e.localizedMessage.contains("unknown error: cannot find")) {
                         println("Download service error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
                     } else {

@@ -23,22 +23,22 @@ class LinkHandler(model: Model) : DriverBase(model) {
         if (isSeriesResult.message != null) {
             return Resource.Error(isSeriesResult.message)
         }
-        if (model.settings().wcoHandler.areLinksEmpty()) {
-            println("Unable to find identity links. Please wait while they download...")
-            val linksScraper = LinksScraper(model)
-            linksScraper.scrapeAllLinks()
-        }
-        var identity = model.settings().wcoHandler
-            .identityForSeriesLink(link)
-        if (identity == SeriesIdentity.NONE) {
-            println("Unable to find identity for link. Please wait while they re-download...")
-            val linksScraper = LinksScraper(model)
-            linksScraper.scrapeAllLinks()
-            identity = model.settings().wcoHandler
-                .identityForSeriesLink(link)
-        }
         val isSeries = isSeriesResult.data == true
         if (forceSeries or isSeries) {
+            if (model.settings().wcoHandler.areLinksEmpty()) {
+                println("Unable to find identity links. Please wait while they download...")
+                val linksScraper = LinksScraper(model)
+                linksScraper.scrapeAllLinks()
+            }
+            var identity = model.settings().wcoHandler
+                .identityForSeriesLink(link)
+            if (identity == SeriesIdentity.NONE) {
+                println("Unable to find identity for link. Please wait while they re-download...")
+                val linksScraper = LinksScraper(model)
+                linksScraper.scrapeAllLinks()
+                identity = model.settings().wcoHandler
+                    .identityForSeriesLink(link)
+            }
             val series = scrapeSeries(
                 link,
                 identity.type

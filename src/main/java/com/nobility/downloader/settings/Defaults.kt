@@ -10,6 +10,7 @@ enum class Defaults(
     val key: String,
     val value: Any
 ) {
+    BYPASSFREESPACECHECK("bypass_fs_check", false),
     DENIEDUPDATE("deniedupdate", false),
     UPDATEVERSION("version", "1.0"),
     PROXY("proxy", ""),
@@ -21,5 +22,5 @@ enum class Defaults(
     DOWNLOADTHREADS("download_threads", 2),
     LASTDOWNLOAD("last_dl", ""),
     TOASTTRANSPARENCY("toast_trans", 50.toDouble()),
-    DRIVER("driver", DriverDefaults.CHROME.name);
+    DRIVER("driver", DriverDefaults.CHROME.name)
 }

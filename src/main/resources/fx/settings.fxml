@@ -10,12 +10,13 @@
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="487.0" prefWidth="678.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="556.0" prefWidth="678.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
   <tabs>
     <Tab text="Main Settings">
          <content>
@@ -112,6 +113,18 @@
                               </CheckBox>
                            </children>
                         </HBox>
+                        <HBox>
+                           <children>
+                              <CheckBox fx:id="cbBypassDiskSpaceCheck" mnemonicParsing="false" stylesheets="@../css/checkbox.css" text="Bypass Disk Space Check" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                 </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This is used in case the free space check doesn't work as intended. Only use this if you know you have enough space. (150MB+)" />
+                                 </tooltip>
+                              </CheckBox>
+                           </children>
+                        </HBox>
                         <VBox alignment="TOP_CENTER" prefWidth="100.0">
                            <children>
                               <Label text="Toast Transparency" textFill="WHITE">
@@ -130,9 +143,12 @@
                               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                            </VBox.margin>
                         </VBox>
-                        <HBox alignment="CENTER" prefHeight="120.0" prefWidth="678.0">
+                        <HBox alignment="CENTER" prefHeight="0.0" prefWidth="678.0">
                            <children>
-                              <Button fx:id="buttonSaveSettings" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" prefHeight="40.0" prefWidth="200.0" text="Save Settings" textAlignment="CENTER" />
+                              <Button fx:id="buttonSaveSettings" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#handleClicks" prefHeight="40.0" prefWidth="200.0" text="Save Settings" textAlignment="CENTER">
+                                 <HBox.margin>
+                                    <Insets top="20.0" />
+                                 </HBox.margin></Button>
                            </children>
                         </HBox>
                      </children>

@@ -146,9 +146,12 @@ class DownloadConfirmController(
                 for (i in 1..threads) {
                     tasks.add(
                         launch {
+                            val downloader = VideoDownloader(model)
                             try {
-                                VideoDownloader(model).run()
+                                downloader.run()
                             } catch (e: Exception) {
+                                downloader.killDriver()
+                                downloader.taskScope.cancel()
                                 if (e.localizedMessage.contains("unknown error: cannot find")) {
                                     println("VideoDownloader error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
                                 } else {

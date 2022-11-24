@@ -42,6 +42,7 @@ import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import java.util.logging.Level
 import java.util.logging.Logger
+import kotlin.collections.ArrayList
 import kotlin.system.exitProcess
 
 class Model {
@@ -95,39 +96,59 @@ class Model {
             openSettings(0)
             return false
         }
-        if (!downloadFolder.canWrite()) {
-            showError(
-                """
+        try {
+            if (!downloadFolder.canWrite()) {
+                showError(
+                    """
     The download folder in your settings doesn't allow write permissions.
     If this is a USB or SD Card then disable write protection.
     Try selecting a folder in the user or home folder. Those are usually not restricted.
     """.trimIndent()
-            )
-            openSettings(0)
+                )
+                openSettings(0)
+                return false
+            }
+        } catch (e: Exception) {
+            showError("Failed to check for write permissions.", e)
             return false
         }
-        if (Tools.bytesToMB(downloadFolder.usableSpace) < 150) {
-            showError(
-                """
-    The download folder in your settings requires at least 150MB of free space.
-    Most videos average around 100MB.
-    """.trimIndent()
-            )
-            openSettings(0)
-            return false
+        if (!store.booleanSetting(Defaults.BYPASSFREESPACECHECK)) {
+            val usableSpace = downloadFolder.usableSpace
+            if (usableSpace != 0L) {
+                if (Tools.bytesToMB(usableSpace) < 150) {
+                    showError(
+                        "The download folder in your settings requires at least 150MB of free space." +
+                                "\nMost videos average around 100MB." +
+                                "\nIf you are having issues with this, open the settings (CTRL + S) and enable Bypass Disk Space Check"
+                    )
+                    openSettings(0)
+                    return false
+                }
+            } else {
+                val freeSpace = downloadFolder.freeSpace
+                if (freeSpace != 0L) {
+                    if (Tools.bytesToMB(freeSpace) < 150) {
+                        showError(
+                            "The download folder in your settings requires at least 150MB of free space." +
+                                    "\nMost videos average around 100MB." +
+                                    "\nIf you are having issues with this, open the settings (CTRL + S) and enable Bypass Disk Space Check"
+                        )
+                        openSettings(0)
+                        return false
+                    }
+                } else {
+                    println("[WARNING] Failed to check for free space. Make sure you have enough space to download videos. (150MB+)")
+                }
+            }
         }
         if (checkUrl) {
             val url = urlTextField.text
             if (url.isNullOrEmpty()) {
                 showError(
-                    """You must input a series or show link first. 
-
-Examples: 
-
-Series: $EXAMPLE_SERIES
-
-Episode: $EXAMPLE_SHOW
- """
+                    "You must input a series or show link first." +
+                            "\n\nExamples:" +
+                            "\nSeries: $EXAMPLE_SERIES\n" +
+                            "\nEpisode: $EXAMPLE_SHOW"
                 )
                 return false
             }
@@ -172,14 +193,25 @@ Episode: $EXAMPLE_SHOW
             val buddyHandler = BuddyHandler(this@Model)
             try {
                 buddyHandler.update(url)
-            } catch (e1: Exception) {
+            } catch (e: Exception) {
                 buddyHandler.kill()
                 stop()
-                e1.printStackTrace()
+                e.printStackTrace()
                 withContext(Dispatchers.JavaFx) {
-                    showError("Failed to read episodes from $url" +
-                            "\nError: " + e1.localizedMessage
-                    )
+                    if (e.localizedMessage.contains("unknown error: cannot find")
+                        || e.localizedMessage.contains("Unable to find driver executable")) {
+                        showError(
+                            "Failed to read episodes from $url" +
+                                    "\nError: Failed to find your browsers binary." +
+                                    "\nThis usually means that the browser you are using is not installed or there are problems reading it." +
+                                    "\nTry a different browser or try again. If this problem persists, there might be permission issues with your folders."
+                        )
+                    } else {
+                        showError(
+                            "Failed to read episodes from $url" +
+                                    "\nError: " + e.localizedMessage
+                        )
+                    }
                 }
                 return@launch
             }
@@ -468,19 +500,24 @@ Episode: $EXAMPLE_SHOW
         for (download in tableView.items) {
             download.updateProgress()
             download.updateFileSizeProperty()
+            download.updateDateProperty()
         }
         tableView.sort()
     }
 
     @Synchronized
     fun addDownload(download: Download) {
-        if (indexForDownload(download) == -1) {
+        val index = indexForDownload(download)
+        if (index == -1) {
             download.updateProgress()
             downloadList.add(download)
             store.downloadBox.put(download)
             tableView.sort()
         } else {
+            //push it to the top of the list
+            download.dateAdded = System.currentTimeMillis()
             updateDownloadInDatabase(download, true)
+            tableView.sort()
         }
     }
 
@@ -623,11 +660,11 @@ Episode: $EXAMPLE_SHOW
                         "any incomplete video. Do you wish to continue?"
             ) {
                 stop()
+                val runningDrivers = ArrayList(runningDrivers)
                 if (runningDrivers.isNotEmpty()) {
                     for (driver in runningDrivers) {
                         if (driver != null) {
                             try {
-                                driver.close()
                                 driver.quit()
                             } catch (ignored: Exception) {
                             }
@@ -638,11 +675,11 @@ Episode: $EXAMPLE_SHOW
                 exitProcess(0)
             }
         } else {
+            val runningDrivers = ArrayList(runningDrivers)
             if (runningDrivers.isNotEmpty()) {
                 for (driver in runningDrivers) {
                     if (driver != null) {
                         try {
-                            driver.close()
                             driver.quit()
                         } catch (ignored: Exception) {
                         }

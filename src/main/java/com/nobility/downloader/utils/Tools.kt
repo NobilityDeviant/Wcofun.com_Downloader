@@ -87,7 +87,6 @@ object Tools {
         return (bytes / 1024L).toDouble()
     }
 
-    @JvmStatic
     fun bytesToMB(bytes: Long): Double {
         val kb = (bytes / 1024L).toInt()
         return (kb / 1024L).toDouble()
@@ -109,7 +108,6 @@ object Tools {
 
     const val dateFormat = "MM/dd/yyyy hh:mm:ssa"
 
-    @JvmStatic
     val dateFormatted: String
         get() {
             val sdf = SimpleDateFormat(dateFormat)
