@@ -25,19 +25,17 @@ class LinkHandler(model: Model) : DriverBase(model) {
         }
         val isSeries = isSeriesResult.data == true
         if (forceSeries or isSeries) {
-            if (model.settings().wcoHandler.areLinksEmpty()) {
-                println("Unable to find identity links. Please wait while they download...")
+            if (model.settings().areLinksEmpty()) {
+                println("Identity links are empty. Please wait while they download...")
                 val linksScraper = LinksScraper(model)
                 linksScraper.scrapeAllLinks()
             }
-            var identity = model.settings().wcoHandler
-                .identityForSeriesLink(link)
+            var identity = model.settings().identityForSeriesLink(link)
             if (identity == SeriesIdentity.NONE) {
                 println("Unable to find identity for link. Please wait while they re-download...")
                 val linksScraper = LinksScraper(model)
                 linksScraper.scrapeAllLinks()
-                identity = model.settings().wcoHandler
-                    .identityForSeriesLink(link)
+                identity = model.settings().identityForSeriesLink(link)
             }
             val series = scrapeSeries(
                 link,
@@ -67,19 +65,17 @@ class LinkHandler(model: Model) : DriverBase(model) {
                 println("Skipping cached series: $link for id: $id")
                 continue
             }
-            if (model.settings().wcoHandler.areLinksEmpty()) {
+            if (model.settings().areLinksEmpty()) {
                 println("Unable to find identity links. Please wait while they download...")
                 val linksScraper = LinksScraper(model)
                 linksScraper.scrapeAllLinks()
             }
-            var identity = model.settings().wcoHandler
-                .identityForSeriesLink(link)
+            var identity = model.settings().identityForSeriesLink(link)
             if (identity == SeriesIdentity.NONE) {
                 println("Unable to find identity for link. Please wait while they re-download...")
                 val linksScraper = LinksScraper(model)
                 linksScraper.scrapeAllLinks()
-                identity = model.settings().wcoHandler
-                    .identityForSeriesLink(link)
+                identity = model.settings().identityForSeriesLink(link)
             }
             println("Checking $link for id: $id")
             val series = scrapeSeries(link, identity.type)

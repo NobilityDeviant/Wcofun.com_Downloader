@@ -308,7 +308,12 @@ object Tools {
         }
     }
 
-    suspend fun downloadFile(link: String, output: File, timeout: Int, userAgent: String) = withContext(Dispatchers.IO) {
+    suspend fun downloadFile(
+        link: String,
+        output: File,
+        timeout: Int,
+        userAgent: String
+    ) = withContext(Dispatchers.IO) {
         var offset = 0L
         if (output.exists()) {
             offset = output.length()

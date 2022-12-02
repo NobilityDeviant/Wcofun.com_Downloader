@@ -53,6 +53,7 @@ class Model {
     private val userAgents = ArrayList<String>()
     var isRunning = false
         private set
+
     //it is needed here for other download checks across the app.
     val episodes: MutableList<Episode> = Collections.synchronizedList(ArrayList())
     private lateinit var downloadList: ObservableList<Download>
@@ -63,6 +64,7 @@ class Model {
     @Volatile
     var downloadsFinishedForSession = 0
         private set
+
     @Volatile
     var downloadsInProgressForSession = 0
         private set
@@ -92,18 +94,16 @@ class Model {
         }
         val downloadFolder = File(store.stringSetting(Defaults.SAVEFOLDER))
         if (!downloadFolder.exists()) {
-            showError("The downloader folder in your settings doesn't exist.")
+            showError("The downloader folder in your settings doesn't exist. You must set it up before downloading videos.")
             openSettings(0)
             return false
         }
         try {
             if (!downloadFolder.canWrite()) {
                 showError(
-                    """
-    The download folder in your settings doesn't allow write permissions.
-    If this is a USB or SD Card then disable write protection.
-    Try selecting a folder in the user or home folder. Those are usually not restricted.
-    """.trimIndent()
+                    "The download folder in your settings doesn't allow write permissions." +
+                            "\nIf this is a USB or SD Card then disable write protection." +
+                            "\nTry selecting a folder in the user or home folder. Those are usually not restricted."
                 )
                 openSettings(0)
                 return false
@@ -199,7 +199,8 @@ class Model {
                 e.printStackTrace()
                 withContext(Dispatchers.JavaFx) {
                     if (e.localizedMessage.contains("unknown error: cannot find")
-                        || e.localizedMessage.contains("Unable to find driver executable")) {
+                        || e.localizedMessage.contains("Unable to find driver executable")
+                    ) {
                         showError(
                             "Failed to read episodes from $url" +
                                     "\nError: Failed to find your browsers binary." +
@@ -290,7 +291,7 @@ class Model {
     private val confirmStage = Stage()
 
     @FXML
-    fun showUpdateConfirm(title: String?, required: Boolean, upToDate: Boolean) {
+    fun showUpdateConfirm(title: String, required: Boolean, upToDate: Boolean) {
         if (updateManager.latestUpdate == null) {
             println("Failed to show update window. Latest update is null.")
             return
@@ -417,7 +418,7 @@ class Model {
     }
 
     private val downloadConfirmStage: Stage = Stage()
-    //todo
+
     fun openDownloadConfirm(series: Series, episode: Episode?) {
         downloadConfirmStage.title = "Download Series"
         val icon = Main::class.java.getResourceAsStream(MAIN_ICON)
@@ -584,14 +585,19 @@ class Model {
         return false
     }
 
-    fun addSeriesToQueue(series: Series): Int {
+    fun addEpisodesToQueue(episodesToAdd: List<Episode>): Int {
         var added = 0
-        for (e in series.episodes) {
-            if (addEpisodeToQueue(e)) {
+        for (episode in episodesToAdd) {
+            if (!isEpisodeInQueue(episode)) {
+                episodes.add(episode)
                 added++
             }
         }
         return added
+    }
+
+    fun addSeriesToQueue(series: Series): Int {
+        return addEpisodesToQueue(series.episodes)
     }
 
     @get:Synchronized
@@ -864,6 +870,18 @@ class Model {
         downloadsInProgressForSession--
     }
 
+    fun debugErr(s: String, e: Exception? = null) {
+        System.err.println("[${Tools.date}][${Tools.currentTime}][DEBUG ERROR]\n$s")
+        if (e != null) {
+            System.err.println("Stacktrace: ")
+            e.printStackTrace()
+        }
+    }
+
+    fun debugNote(s: String) {
+        System.err.println("[${Tools.date}][${Tools.currentTime}][DEBUG NOTE]\n$s")
+    }
+
     val updateManager = UpdateManager(this)
 
     init {
@@ -871,12 +889,14 @@ class Model {
         store.loadSettings()
 
         try {
-            userAgents.addAll(Files.readAllLines(
-                File(
-                    "." + File.separator
-                            + "resources" + File.separator + "ua.txt"
-                ).toPath()
-            ))
+            userAgents.addAll(
+                Files.readAllLines(
+                    File(
+                        "." + File.separator
+                                + "resources" + File.separator + "ua.txt"
+                    ).toPath()
+                )
+            )
             println("Successfully loaded " + userAgents.size + " user agents.")
         } catch (e: Exception) {
             println("Unable to load /resources/ua.txt (UserAgents) attempting to download them.")

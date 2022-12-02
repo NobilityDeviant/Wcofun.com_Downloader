@@ -85,12 +85,13 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
                         val downloadSeries = MenuItem("Download Series")
                         downloadSeries.onAction = EventHandler {
                             if (model.isRunning) {
-                                val added = model.addSeriesToQueue(row.item)
+                                model.openDownloadConfirm(row.item, null)
+                                /*val added = model.addSeriesToQueue(row.item)
                                 if (added > 0) {
                                     model.toast("Added $added series episodes to download queue.")
                                 } else {
                                     model.toast("All series episodes are already in queue.")
-                                }
+                                }*/
                                 return@EventHandler
                             }
                             model.urlTextField.text = row.item.link

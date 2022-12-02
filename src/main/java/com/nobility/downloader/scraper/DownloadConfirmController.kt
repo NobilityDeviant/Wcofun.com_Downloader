@@ -124,12 +124,17 @@ class DownloadConfirmController(
 
     @FXML
     fun downloadSeries() {
-        if (model.isRunning) {
-            model.toast("You can't use this while the downloader is running.")
-            return
-        }
         if (selectedEpisodes.isEmpty()) {
             model.toast("You must select at least one episode to download.", stage)
+            return
+        }
+        if (model.isRunning) {
+            val added = model.addEpisodesToQueue(selectedEpisodes)
+            if (added > 0) {
+                model.toast("Added $added episode(s) to current queue.")
+            } else {
+                model.toast("No episodes have been added to current queue. They have already been added before.")
+            }
             return
         }
         model.softStart()
@@ -153,9 +158,9 @@ class DownloadConfirmController(
                                 downloader.killDriver()
                                 downloader.taskScope.cancel()
                                 if (e.localizedMessage.contains("unknown error: cannot find")) {
-                                    println("VideoDownloader error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
+                                    println("[$i] VideoDownloader error. Unable to find your browser. Be sure to set it in the settings before downloading anything.")
                                 } else {
-                                    println("VideoDownloader error: " + e.localizedMessage)
+                                    println("[$i] VideoDownloader error: " + e.localizedMessage)
                                 }
                             }
                         }
@@ -167,9 +172,7 @@ class DownloadConfirmController(
                 } else {
                     println("Gracefully shutdown. No downloads have been made.")
                 }
-                withContext(Dispatchers.JavaFx) {
-                    model.stop()
-                }
+                model.stop()
             } catch (e: Exception) {
                 model.stop()
                 println("Download service error: " + e.localizedMessage)

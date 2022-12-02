@@ -127,12 +127,13 @@ class WcoController : Initializable {
                         downloadSeries.onAction =
                             EventHandler {
                                 if (model.isRunning) {
-                                    val added = model.addSeriesToQueue(row.item)
+                                    model.openDownloadConfirm(row.item, null)
+                                    /*val added = model.addSeriesToQueue(row.item)
                                     if (added > 0) {
                                         model.toast("Added $added series episodes to download queue.")
                                     } else {
                                         model.toast("All series episodes are already in queue.")
-                                    }
+                                    }*/
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link
@@ -303,6 +304,7 @@ class WcoController : Initializable {
                 val link = Hyperlink(g.name)
                 link.textFill = Color.WHITE
                 link.setOnAction {
+                    //todo add an option to show link or search for genre
                     model.showLinkPrompt(g.link, true)
                 }
                 textFlow.children.add(link)

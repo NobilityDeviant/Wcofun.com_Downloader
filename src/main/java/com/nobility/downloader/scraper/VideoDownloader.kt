@@ -27,7 +27,10 @@ class VideoDownloader(model: Model) : DriverBase(model) {
 
     suspend fun run() = withContext(Dispatchers.IO) {
         while (model.isRunning) {
-            if (retries >= 10) {
+            if (retries >= 15) {
+                if (currentEpisode != null) {
+                    println("Reached max retries (15) for ${episode.link}. Skipping episode...")
+                }
                 currentEpisode = null
                 retries = 0
                 continue
@@ -75,8 +78,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
             if (currentDownload != null) {
                 if (download.downloadPath.isNullOrEmpty()
                     || !File(download.downloadPath).exists()
-                    || download.downloadPath != saveFile.absolutePath
-                ) {
+                    || download.downloadPath != saveFile.absolutePath) {
                     download.downloadPath = saveFile.absolutePath
                 }
                 model.addDownload(download)
@@ -103,8 +105,8 @@ class VideoDownloader(model: Model) : DriverBase(model) {
             var flag = 0
             while (flag < 2) {
                 try {
-                    wait.pollingEvery(Duration.ofSeconds(2))
-                        .withTimeout(Duration.ofSeconds(6))
+                    wait.pollingEvery(Duration.ofSeconds(1))
+                        .withTimeout(Duration.ofSeconds(10))
                         .until(
                             ExpectedConditions.visibilityOfElementLocated(
                                 By.id(
@@ -128,10 +130,12 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                     foundVideoFrame = true
                     break
                 } catch (e: Exception) {
+                    model.debugErr("Failed to find flag $flag. Trying next one.", e)
                     flag++
                 }
             }
             if (!foundVideoFrame) {
+                model.debugErr("No flag was found. IFrame not found in webpage.")
                 println("Failed to find video frame for $link. Retrying...")
                 retries++
                 model.decrementDownloadsInProgress()
@@ -140,25 +144,22 @@ class VideoDownloader(model: Model) : DriverBase(model) {
             var videoLink: String
             try {
                 val videoPlayer = driver.findElement(By.id(videoJs))
-                if (videoPlayer == null || !videoPlayer.isDisplayed) {
-                    println("Failed to find the video player for $link. Retrying...")
-                    retries++
-                    model.decrementDownloadsInProgress()
-                    continue
-                }
                 videoLink = videoPlayer.getAttribute("src")
             } catch (e: Exception) {
+                model.debugErr("Found frame, but failed to find $videoJs", e)
                 println("Failed to find video player inside frame for $link. Retrying...")
                 retries++
                 model.decrementDownloadsInProgress()
                 continue
             }
             if (videoLink.isEmpty()) {
+                model.debugErr("Found $videoJs, but the video link was empty? Might be lag.")
                 println("Failed to find video link for $link. Retrying...")
                 retries++
                 model.decrementDownloadsInProgress()
                 continue
             }
+            model.debugNote("Successfully found video link with $retries retries.")
             //println(videoLink)
             try {
                 if (currentDownload == null) {
@@ -172,6 +173,9 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                     )
                     download.queued = true
                     model.addDownload(download)
+                    model.debugNote("Created new download for ${episode.name}")
+                } else {
+                    model.debugNote("Using existing download for ${episode.name}")
                 }
                 val originalFileSize = fileSize(URL(videoLink))
                 if (originalFileSize <= 5000) {
@@ -193,7 +197,18 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                         continue
                     }
                 } else {
-                    saveFile.createNewFile()
+                    try {
+                        val created = saveFile.createNewFile()
+                        if (!created) {
+                            throw Exception("No error thrown.")
+                        }
+                    } catch (e: Exception) {
+                        model.debugErr("Unable to create video file for ${episode.name}", e)
+                        println("Failed to create new video file for ${episode.name} Retrying...")
+                        retries++
+                        model.decrementDownloadsInProgress()
+                        continue
+                    }
                 }
                 println("Downloading: " + download.name)
                 download.queued = false
@@ -219,6 +234,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                             "\nError: ${e.localizedMessage}" +
                             "\nReattempting..."
                 )
+                model.debugErr("Failed to download ${download.name}", e)
                 model.decrementDownloadsInProgress()
             }
         }
@@ -270,7 +286,6 @@ class VideoDownloader(model: Model) : DriverBase(model) {
         con.connectTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
         con.readTimeout = model.settings().integerSetting(Defaults.TIMEOUT) * 1000
         con.addRequestProperty("User-Agent", userAgent)
-        //todo check for file space
         val completeFileSize = con.contentLength + offset
         if (offset != 0L) {
             println("Detected incomplete video: " + download.name + " - Attempting to finish it.")

@@ -19,6 +19,7 @@ class BoxStoreHandler(model: Model) {
     val downloadBox: Box<Download> = myData.boxFor(Download::class.java)
     val seriesBox: Box<Series> = myData.boxFor(Series::class.java)
     private val metaBox = myData.boxFor(SettingsMeta::class.java)
+    private val linksBox: Box<Links> = myData.boxFor(Links::class.java)
 
     init {
         wcoHandler = WcoHandler(databasePath, model)
@@ -176,5 +177,117 @@ class BoxStoreHandler(model: Model) {
         } catch (ignored: Exception) {
         }
         return null
+    }
+
+    private val mainLinks: Links
+        get() {
+            if (linksBox.isEmpty) {
+                val links = Links(ArrayList(), ArrayList(), ArrayList(), ArrayList())
+                linksBox.put(links)
+                return links
+            }
+            return linksBox.all[0]
+        }
+
+    fun areLinksEmpty(): Boolean {
+        return getSubbedLinks().isEmpty() || getDubbedLinks().isEmpty()
+                || getCartoonsLinks().isEmpty() || getMoviesLinks().isEmpty()
+    }
+
+    fun setDubbedLinks(dubbed: List<String>) {
+        val links = mainLinks
+        links.dubbed.clear()
+        links.dubbed.addAll(dubbed)
+        linksBox.put(links)
+    }
+
+    private fun getDubbedLinks(): List<String> {
+        val links = mainLinks
+        return if (links.dubbed != null) {
+            links.dubbed
+        } else {
+            ArrayList()
+        }
+    }
+
+    fun setSubbedLinks(subbed: List<String>) {
+        val links = mainLinks
+        links.subbed.clear()
+        links.subbed.addAll(subbed)
+        linksBox.put(links)
+    }
+
+    private fun getSubbedLinks(): List<String> {
+        val links = mainLinks
+        return if (links.subbed != null) {
+            links.subbed
+        } else {
+            ArrayList()
+        }
+    }
+
+    fun setCartoonLinks(cartoons: List<String>) {
+        val links = mainLinks
+        links.cartoons.clear()
+        links.cartoons.addAll(cartoons)
+        linksBox.put(links)
+    }
+
+    private fun getCartoonsLinks(): List<String> {
+        val links = mainLinks
+        return if (links.cartoons != null) {
+            links.cartoons
+        } else {
+            ArrayList()
+        }
+    }
+
+    fun setMoviesLinks(movies: List<String>) {
+        val links = mainLinks
+        links.movies.clear()
+        links.movies.addAll(movies)
+        linksBox.put(links)
+    }
+
+    private fun getMoviesLinks(): List<String> {
+        val links = mainLinks
+        return if (links.movies != null) {
+            links.movies
+        } else {
+            ArrayList()
+        }
+    }
+
+    fun allLinks(): List<String> {
+        val links = ArrayList<String>()
+        links.addAll(getSubbedLinks())
+        links.addAll(getDubbedLinks())
+        links.addAll(getCartoonsLinks())
+        links.addAll(getMoviesLinks())
+        return links
+    }
+
+    fun identityForSeriesLink(link: String): SeriesIdentity {
+        for (s in getSubbedLinks()) {
+            if (s == link) {
+                return SeriesIdentity.SUBBED
+            }
+        }
+        for (s in getDubbedLinks()) {
+            if (s == link) {
+                return SeriesIdentity.DUBBED
+            }
+        }
+        for (s in getCartoonsLinks()) {
+            if (s == link) {
+                return SeriesIdentity.CARTOON
+            }
+        }
+        for (s in getMoviesLinks()) {
+            if (s == link) {
+                return SeriesIdentity.MOVIE
+            }
+        }
+        return SeriesIdentity.NONE
     }
 }

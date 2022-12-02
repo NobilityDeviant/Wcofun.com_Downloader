@@ -54,19 +54,19 @@ class LinksScraper(model: Model) : DriverBase(model) {
         }
         when (identity) {
             SeriesIdentity.SUBBED -> {
-                model.settings().wcoHandler.setSubbedLinks(links)
+                model.settings().setSubbedLinks(links)
                 println("Successfully downloaded ${links.size} subbed links.")
             }
             SeriesIdentity.DUBBED -> {
-                model.settings().wcoHandler.setDubbedLinks(links)
+                model.settings().setDubbedLinks(links)
                 println("Successfully downloaded ${links.size} dubbed links.")
             }
             SeriesIdentity.CARTOON -> {
-                model.settings().wcoHandler.setCartoonLinks(links)
+                model.settings().setCartoonLinks(links)
                 println("Successfully downloaded ${links.size} cartoon links.")
             }
             SeriesIdentity.MOVIE -> {
-                model.settings().wcoHandler.setMoviesLinks(links)
+                model.settings().setMoviesLinks(links)
                 println("Successfully downloaded ${links.size} movie links.")
             }
             else -> {}
