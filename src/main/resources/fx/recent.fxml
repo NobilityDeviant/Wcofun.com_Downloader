@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefHeight="858.0" prefWidth="705.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.scraper.RecentController">
+<VBox alignment="CENTER" prefHeight="754.0" prefWidth="705.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.scraper.RecentController">
    <children>
       <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Recent Episodes" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>

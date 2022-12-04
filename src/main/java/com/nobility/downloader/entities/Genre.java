@@ -13,7 +13,7 @@ public class Genre {
     public String name;
     public String link;
     @Backlink(to = "genres")
-    public ToMany<Series> series;
+    public ToMany<Series> series = new ToMany<>(this, Genre_.series);
     public long lastUpdated;
 
     public Genre() {}

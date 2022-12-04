@@ -16,10 +16,13 @@ class BoxStoreHandler(model: Model) {
     private val myData = MyObjectBox.builder()
         .directory(File(databasePath + "mydata"))
         .build()
+    private val linksData = MyObjectBox.builder()
+        .directory(File(databasePath + "links"))
+        .build()
     val downloadBox: Box<Download> = myData.boxFor(Download::class.java)
     val seriesBox: Box<Series> = myData.boxFor(Series::class.java)
     private val metaBox = myData.boxFor(SettingsMeta::class.java)
-    private val linksBox: Box<Links> = myData.boxFor(Links::class.java)
+    private val linksBox = linksData.boxFor(CategoryLink::class.java)
 
     init {
         wcoHandler = WcoHandler(databasePath, model)
@@ -179,114 +182,54 @@ class BoxStoreHandler(model: Model) {
         return null
     }
 
-    private val mainLinks: Links
-        get() {
-            if (linksBox.isEmpty) {
-                val links = Links(ArrayList(), ArrayList(), ArrayList(), ArrayList())
-                linksBox.put(links)
-                return links
-            }
-            return linksBox.all[0]
-        }
-
     fun areLinksEmpty(): Boolean {
-        return getSubbedLinks().isEmpty() || getDubbedLinks().isEmpty()
-                || getCartoonsLinks().isEmpty() || getMoviesLinks().isEmpty()
-    }
-
-    fun setDubbedLinks(dubbed: List<String>) {
-        val links = mainLinks
-        links.dubbed.clear()
-        links.dubbed.addAll(dubbed)
-        linksBox.put(links)
-    }
-
-    private fun getDubbedLinks(): List<String> {
-        val links = mainLinks
-        return if (links.dubbed != null) {
-            links.dubbed
-        } else {
-            ArrayList()
-        }
-    }
-
-    fun setSubbedLinks(subbed: List<String>) {
-        val links = mainLinks
-        links.subbed.clear()
-        links.subbed.addAll(subbed)
-        linksBox.put(links)
-    }
-
-    private fun getSubbedLinks(): List<String> {
-        val links = mainLinks
-        return if (links.subbed != null) {
-            links.subbed
-        } else {
-            ArrayList()
-        }
-    }
-
-    fun setCartoonLinks(cartoons: List<String>) {
-        val links = mainLinks
-        links.cartoons.clear()
-        links.cartoons.addAll(cartoons)
-        linksBox.put(links)
-    }
-
-    private fun getCartoonsLinks(): List<String> {
-        val links = mainLinks
-        return if (links.cartoons != null) {
-            links.cartoons
-        } else {
-            ArrayList()
-        }
-    }
-
-    fun setMoviesLinks(movies: List<String>) {
-        val links = mainLinks
-        links.movies.clear()
-        links.movies.addAll(movies)
-        linksBox.put(links)
-    }
-
-    private fun getMoviesLinks(): List<String> {
-        val links = mainLinks
-        return if (links.movies != null) {
-            links.movies
-        } else {
-            ArrayList()
-        }
+        return linksBox.isEmpty
     }
 
     fun allLinks(): List<String> {
-        val links = ArrayList<String>()
-        links.addAll(getSubbedLinks())
-        links.addAll(getDubbedLinks())
-        links.addAll(getCartoonsLinks())
-        links.addAll(getMoviesLinks())
-        return links
+        val set = mutableSetOf<String>()
+        for (link in linksBox.all) {
+            set.add(link.url)
+        }
+        return set.toList()
     }
 
-    fun identityForSeriesLink(link: String): SeriesIdentity {
-        for (s in getSubbedLinks()) {
-            if (s == link) {
-                return SeriesIdentity.SUBBED
+    fun addLink(url: String, identity: SeriesIdentity): Boolean {
+        if (linkForSeriesUrl(url) == null) {
+            linksBox.put(CategoryLink(url, identity.type))
+            return true
+        }
+        return false
+    }
+
+    fun addLinks(list: List<String>, identity: SeriesIdentity): Int {
+        var added = 0
+        for (s in list) {
+            if (addLink(s, identity)) {
+                added++
             }
         }
-        for (s in getDubbedLinks()) {
-            if (s == link) {
-                return SeriesIdentity.DUBBED
-            }
+        return added
+    }
+
+    private fun linkForSeriesUrl(url: String): CategoryLink? {
+        try {
+            linksBox.query()
+                .equal(CategoryLink_.url, url, StringOrder.CASE_INSENSITIVE)
+                .build()
+                .use {
+                    return it.findUnique()
+                }
+        } catch (ignored: Exception) {
+            ignored.printStackTrace()
         }
-        for (s in getCartoonsLinks()) {
-            if (s == link) {
-                return SeriesIdentity.CARTOON
-            }
-        }
-        for (s in getMoviesLinks()) {
-            if (s == link) {
-                return SeriesIdentity.MOVIE
-            }
+        return null
+    }
+
+    fun identityForSeriesUrl(url: String): SeriesIdentity {
+        val wcoLink = linkForSeriesUrl(url)
+        if (wcoLink != null) {
+            return SeriesIdentity.idForType(wcoLink.type)
         }
         return SeriesIdentity.NONE
     }

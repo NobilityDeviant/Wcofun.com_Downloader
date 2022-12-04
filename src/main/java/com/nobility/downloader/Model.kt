@@ -9,6 +9,7 @@ import com.nobility.downloader.series.SeriesDetailsController
 import com.nobility.downloader.settings.Defaults
 import com.nobility.downloader.settings.SettingsController
 import com.nobility.downloader.updates.UpdateManager
+import com.nobility.downloader.utils.Option
 import com.nobility.downloader.utils.TextOutput
 import com.nobility.downloader.utils.Toast
 import com.nobility.downloader.utils.Tools
@@ -464,7 +465,7 @@ class Model {
     private val wcoStage: Stage = Stage()
 
     fun openWco() {
-        wcoStage.title = "Series"
+        wcoStage.title = "All Series"
         val icon = Main::class.java.getResourceAsStream(SETTINGS_ICON)
         if (icon != null) {
             wcoStage.icons.add(Image(icon))
@@ -488,6 +489,54 @@ class Model {
         } catch (e: IOException) {
             e.printStackTrace()
             println("Failed to open wco window. Error: ${e.localizedMessage}")
+        }
+    }
+
+    private val choiceStage: Stage = Stage()
+
+    fun showChoice(title: String, content: String, vararg options: Option) {
+        choiceStage.title = title
+        val icon = Main::class.java.getResourceAsStream(SETTINGS_ICON)
+        if (icon != null) {
+            choiceStage.icons.add(Image(icon))
+        }
+        choiceStage.isResizable = true
+        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "choice.fxml"))
+        val listOption = ArrayList<Option>()
+        for (o in options) {
+            listOption.add(o)
+        }
+        loader.controllerFactory = Callback { controllerType: Class<*> ->
+            try {
+                for (con in controllerType.constructors) {
+                    if (
+                        con.parameterCount == 4
+                        && con.parameterTypes[0] == Stage::class.java
+                        && con.parameterTypes[1] == String::class.java
+                        && con.parameterTypes[2] == String::class.java
+                        && con.parameterTypes[3] == List::class.java
+                    ) {
+                        return@Callback con.newInstance(choiceStage, title, content, listOption)
+                    }
+                }
+                return@Callback controllerType.getDeclaredConstructor().newInstance()
+            } catch (e: Exception) {
+                println("Failed to load ChoiceController. Error: ${e.localizedMessage}")
+                e.printStackTrace()
+                return@Callback null
+            }
+        }
+        val layout: Parent
+        try {
+            layout = loader.load()
+            val scene = Scene(layout)
+            choiceStage.toFront()
+            choiceStage.scene = scene
+            choiceStage.sizeToScene()
+            choiceStage.showAndWait()
+        } catch (e: IOException) {
+            println("Failed to open choice window. Error: ${e.localizedMessage}")
+            e.printStackTrace()
         }
     }
 

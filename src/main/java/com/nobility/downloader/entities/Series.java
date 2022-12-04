@@ -19,8 +19,8 @@ public class Series {
     public String movieLink;
     public String name;
     public String dateAdded;
-    public ToMany<Episode> episodes;
-    public ToMany<Genre> genres;
+    public ToMany<Episode> episodes = new ToMany<>(this, Series_.episodes);
+    public ToMany<Genre> genres = new ToMany<>(this, Series_.genres);
     public String imageLink;
     public String description;
     public long lastUpdated;

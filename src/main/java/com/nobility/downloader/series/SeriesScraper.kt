@@ -14,6 +14,7 @@ class SeriesScraper(model: Model) : DriverBase(model) {
     suspend fun updateWcoDb() = withContext(Dispatchers.IO) {
         val linksScraper = LinksScraper(model)
         linksScraper.scrapeAllLinks()
+        linksScraper.killDriver()
         val allLinks = model.settings().allLinks()
         val uncached = HashSet<String>()
         println("[WARNING] This is a very intensive task. If wcofun's owners detect multiple bots running, " +

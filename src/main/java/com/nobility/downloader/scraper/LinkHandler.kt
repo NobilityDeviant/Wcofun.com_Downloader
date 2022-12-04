@@ -25,18 +25,16 @@ class LinkHandler(model: Model) : DriverBase(model) {
         }
         val isSeries = isSeriesResult.data == true
         if (forceSeries or isSeries) {
+            val linksScraper = LinksScraper(model)
             if (model.settings().areLinksEmpty()) {
-                println("Identity links are empty. Please wait while they download...")
-                val linksScraper = LinksScraper(model)
+                println("Links are empty. Please wait while they download...")
                 linksScraper.scrapeAllLinks()
             }
-            var identity = model.settings().identityForSeriesLink(link)
+            var identity = model.settings().identityForSeriesUrl(link)
             if (identity == SeriesIdentity.NONE) {
-                println("Unable to find identity for link. Please wait while they re-download...")
-                val linksScraper = LinksScraper(model)
-                linksScraper.scrapeAllLinks()
-                identity = model.settings().identityForSeriesLink(link)
+                identity = linksScraper.findIdentityForUrl(link)
             }
+            linksScraper.killDriver()
             val series = scrapeSeries(
                 link,
                 identity.type
@@ -65,18 +63,16 @@ class LinkHandler(model: Model) : DriverBase(model) {
                 println("Skipping cached series: $link for id: $id")
                 continue
             }
+            val linksScraper = LinksScraper(model)
             if (model.settings().areLinksEmpty()) {
-                println("Unable to find identity links. Please wait while they download...")
-                val linksScraper = LinksScraper(model)
+                println("Links are empty. Please wait while they download...")
                 linksScraper.scrapeAllLinks()
             }
-            var identity = model.settings().identityForSeriesLink(link)
+            var identity = model.settings().identityForSeriesUrl(link)
             if (identity == SeriesIdentity.NONE) {
-                println("Unable to find identity for link. Please wait while they re-download...")
-                val linksScraper = LinksScraper(model)
-                linksScraper.scrapeAllLinks()
-                identity = model.settings().identityForSeriesLink(link)
+                identity = linksScraper.findIdentityForUrl(link)
             }
+            linksScraper.killDriver()
             println("Checking $link for id: $id")
             val series = scrapeSeries(link, identity.type)
             if (series.data != null) {
@@ -162,22 +158,13 @@ class LinkHandler(model: Model) : DriverBase(model) {
                         Tools.dateFormatted,
                         identity
                     )
+                    model.settings().seriesBox.attach(series)
+                    model.settings().wcoHandler.seriesBox.attach(series)
                     series.movieLink = categoryLink
                     series.episodes.add(Episode(videoTitle[0].text(), seriesLink, ""))
                     return@withContext Resource.Success(series)
                 } else {
-                    //println("Found series link for movie. ($categoryLink) Using that instead.")
                     movieLink = categoryLink
-                    /*val cachedSeries = model.settings().wcoHandler.seriesForLink(categoryLink)
-                    if (cachedSeries != null) {
-                        if (cachedSeries.movieLink != movieLink) {
-                            cachedSeries.movieLink = movieLink
-                            //model.settings().wcoHandler.removeSeries(cachedSeries)
-                            model.settings().wcoHandler.addOrUpdateSeries(cachedSeries)
-                        }
-                        println("Found cached movie series. Using that instead.")
-                        return@withContext Resource.Success(cachedSeries)
-                    }*/
                     driver.get(categoryLink)
                     doc = Jsoup.parse(driver.pageSource)
                 }
@@ -233,6 +220,8 @@ class LinkHandler(model: Model) : DriverBase(model) {
                     Tools.dateFormatted,
                     identity
                 )
+                model.settings().seriesBox.attach(series)
+                model.settings().wcoHandler.seriesBox.attach(series)
                 series.movieLink = movieLink
                 model.settings().wcoHandler.downloadSeriesImage(series)
                 series.episodes.addAll(episodes)

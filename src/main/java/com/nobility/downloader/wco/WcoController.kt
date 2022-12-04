@@ -9,6 +9,7 @@ import com.nobility.downloader.scraper.BuddyHandler
 import com.nobility.downloader.scraper.RecentResult
 import com.nobility.downloader.scraper.RecentScraper
 import com.nobility.downloader.settings.Defaults
+import com.nobility.downloader.utils.Option
 import com.nobility.downloader.utils.Tools
 import com.nobility.downloader.utils.Tools.loadImageFromURL
 import io.objectbox.query.Query
@@ -85,6 +86,7 @@ class WcoController : Initializable {
     private val rowHeight = 170.0
     private var checkingSize = 0
     private var loading = false
+    private var currentPage = -1
 
     fun setup(model: Model, stage: Stage) {
         this.model = model
@@ -128,12 +130,6 @@ class WcoController : Initializable {
                             EventHandler {
                                 if (model.isRunning) {
                                     model.openDownloadConfirm(row.item, null)
-                                    /*val added = model.addSeriesToQueue(row.item)
-                                    if (added > 0) {
-                                        model.toast("Added $added series episodes to download queue.")
-                                    } else {
-                                        model.toast("All series episodes are already in queue.")
-                                    }*/
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link
@@ -196,13 +192,45 @@ class WcoController : Initializable {
                             downloadSeries,
                             checkForNewEpisodes
                         )
+                        if (SeriesIdentity.isFilteredType(row.item.identity)) {
+                            val moveToCategory = MenuItem("Move To Category")
+                            moveToCategory.onAction = EventHandler {
+                                model.showChoice(
+                                    "Move To Category",
+                                    "You have the option to label this series.",
+                                    Option("Dubbbed") {
+                                        val series = row.item
+                                        series.identity = SeriesIdentity.DUBBED.type
+                                        model.settings().wcoHandler.addOrUpdateSeries(series)
+                                        model.toast("Successfully changed identity to Dubbed.", stage)
+                                    },
+                                    Option("Subbed") {
+                                        val series = row.item
+                                        series.identity = SeriesIdentity.SUBBED.type
+                                        model.settings().wcoHandler.addOrUpdateSeries(series)
+                                        model.toast("Successfully changed identity to Subbed.", stage)
+                                    },
+                                    Option("Cartoon") {
+                                        val series = row.item
+                                        series.identity = SeriesIdentity.CARTOON.type
+                                        model.settings().wcoHandler.addOrUpdateSeries(series)
+                                        model.toast("Successfully changed identity to Cartoon.", stage)
+                                    },
+                                    Option("Movie") {
+                                        val series = row.item
+                                        series.identity = SeriesIdentity.MOVIE.type
+                                        model.settings().wcoHandler.addOrUpdateSeries(series)
+                                        model.toast("Successfully changed identity to Movie.", stage)
+                                    }
+                                )
+                            }
+                            menu.items.add(moveToCategory)
+                        }
                         if (model.developerMode) {
                             val remove = MenuItem("Remove From DB")
                             remove.onAction = EventHandler {
                                 model.settings().wcoHandler.seriesBox.remove(row.item)
                                 model.toast("Successfully removed series from the database.", stage)
-                                //seriesTable.items.remove(row.item)
-                                //doesnt work
                             }
                             menu.items.add(remove)
                             val clear = MenuItem("Remove All Episodes")
@@ -304,8 +332,17 @@ class WcoController : Initializable {
                 val link = Hyperlink(g.name)
                 link.textFill = Color.WHITE
                 link.setOnAction {
-                    //todo add an option to show link or search for genre
-                    model.showLinkPrompt(g.link, true)
+                    model.showChoice(
+                        "Genre Options",
+                        "",
+                        Option("Search For ${g.name}") {
+                            searchTextField.text = g.name
+                            search()
+                        },
+                        Option("Open Link") {
+                            model.showLinkPrompt(g.link, true)
+                        }
+                    )
                 }
                 textFlow.children.add(link)
             }
@@ -353,7 +390,7 @@ class WcoController : Initializable {
             subbedButton -> setFilter(SeriesIdentity.SUBBED)
             cartoonButton -> setFilter(SeriesIdentity.CARTOON)
             movieButton -> setFilter(SeriesIdentity.MOVIE)
-            uncategorizedButton -> setFilter(SeriesIdentity.NONE)
+            uncategorizedButton -> setFilter(SeriesIdentity.NONE, SeriesIdentity.NEW)
         }
     }
 
@@ -430,22 +467,25 @@ class WcoController : Initializable {
         }
     }
 
-    private fun setFilter(identity: SeriesIdentity) {
+    private fun setFilter(vararg identities: SeriesIdentity) {
+        if (currentPage == identities[0].type) {
+            return
+        }
+        currentPage = identities[0].type
         seriesTable.items = FXCollections.observableArrayList(emptyList())
         loading = true
         resultsLabel.text = "Adding series from type..."
         taskScope.launch {
+            var builder = model.settings().wcoHandler.seriesBox.query()
+                .equal(Series_.identity, identities[0].type.toLong())
+            if (identities.size > 1) {
+                for (i in 1 until identities.size) {
+                    builder = builder.or().equal(Series_.identity, identities[i].type.toLong())
+                }
+            }
             val query: Query<Series>
             try {
-                query = if (identity != SeriesIdentity.NONE) {
-                    model.settings().wcoHandler.seriesBox.query()
-                        .equal(Series_.identity, identity.type.toLong()).build()
-                } else {
-                    model.settings().wcoHandler.seriesBox.query()
-                        .equal(Series_.identity, -1)
-                        .or().equal(Series_.identity, identity.type.toLong())
-                        .build()
-                }
+                query = builder.build()
                 query.use {
                     val series = it.find()
                     if (series.isNotEmpty()) {
@@ -459,8 +499,8 @@ class WcoController : Initializable {
                 }
             } catch (e: Exception) {
                 loading = false
-                resultsLabel.text = "Failed to query series."
                 withContext(Dispatchers.JavaFx) {
+                    resultsLabel.text = "Failed to query series."
                     model.showError("Failed to query series.", e)
                 }
             }
