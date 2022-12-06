@@ -120,7 +120,9 @@ class BuddyHandler(private val model: Model) {
         }
     }
 
-    suspend fun checkForNewEpisodes(series: Series): Resource<NewEpisodes> = withContext(Dispatchers.IO) {
+    suspend fun checkForNewEpisodes(
+        series: Series
+    ): Resource<NewEpisodes> = withContext(Dispatchers.IO) {
         println("Looking for new episodes for ${series.name}")
         val scraper = LinkHandler(model)
         val result = scraper.getSeriesEpisodes(series.link)
@@ -133,6 +135,23 @@ class BuddyHandler(private val model: Model) {
             }
         }
         return@withContext Resource.Error("No new episode have been found for ${series.name}.")
+    }
+
+    suspend fun updateSeriesDetails(
+        _series: Series
+    ): Resource<Series> = withContext(Dispatchers.IO) {
+        val series = _series
+        println("Updating series details for ${series.name}")
+        val scraper = LinkHandler(model)
+        val result = scraper.handleLink(series.link, true)
+        scraper.killDriver()
+        if (result.data is Series) {
+            series.update(result.data)
+            model.settings().wcoHandler.addOrUpdateSeries(series)
+            return@withContext Resource.Success(result.data)
+        } else {
+            return@withContext Resource.Error("${result.message}")
+        }
     }
 
     private fun compareForNewEpisodes(

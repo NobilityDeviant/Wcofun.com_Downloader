@@ -4,8 +4,10 @@ import com.nobility.downloader.DriverBase
 import com.nobility.downloader.Model
 import com.nobility.downloader.entities.Episode
 import com.nobility.downloader.entities.Series
+import com.nobility.downloader.scraper.BuddyHandler
 import com.nobility.downloader.scraper.LinkHandler
 import com.nobility.downloader.settings.Defaults
+import com.nobility.downloader.utils.Option
 import com.nobility.downloader.utils.Resource
 import com.nobility.downloader.utils.Tools
 import com.nobility.downloader.utils.Tools.loadImageFromURL
@@ -35,6 +37,8 @@ class SeriesDetailsController : DriverBase(), Initializable {
 
     private lateinit var stage: Stage
     private lateinit var seriesLink: String
+    private lateinit var series: Series
+    private var updating = false
 
     @FXML
     private lateinit var image: ImageView
@@ -162,6 +166,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
     }
 
     private suspend fun updateUI(series: Series) {
+        this.series = series
         withContext(Dispatchers.IO) {
             loadSeriesImage(series)
         }
@@ -225,25 +230,67 @@ class SeriesDetailsController : DriverBase(), Initializable {
     }
 
     @FXML
-    fun visitUrl() {
-        model.showLinkPrompt(seriesLink, true)
+    fun urlOptions() {
+        if (updating) {
+            model.toast("Please wait for the update to finish.", stage)
+            return
+        }
+        model.showChoice(
+            "URL Options",
+            "",
+            Option("Copy URL") {
+                model.showCopyPrompt(seriesLink, false, stage)
+            },
+            Option("Visit URL") {
+                model.showLinkPrompt(seriesLink, true)
+            }
+        )
     }
 
     @FXML
-    fun copyUrl() {
-        model.showCopyPrompt(seriesLink, false)
+    fun updateDetails() {
+        if (updating) {
+            model.toast("Please wait for the update to finish.", stage)
+            return
+        }
+        updating = true
+        model.toast("Updating Series Details... Please wait.", stage)
+        taskScope.launch {
+            val buddyHandler = BuddyHandler(model)
+            val result = buddyHandler.updateSeriesDetails(series)
+            buddyHandler.kill()
+            if (result.data != null) {
+                withContext(Dispatchers.JavaFx) {
+                    series.update(result.data)
+                    updateUI(series)
+                    model.showMessage(
+                        "Success",
+                        "Successfully updated details for: ${series.name}."
+                    )
+                }
+            } else {
+                withContext(Dispatchers.JavaFx) {
+                    model.showError("Failed to update details for ${series.name}. Error: ${result.message}")
+                }
+            }
+            updating = false
+        }
     }
 
     @FXML
     fun downloadSeries() {
+        if (updating) {
+            model.toast("Please wait for the update to finish.", stage)
+            return
+        }
         if (model.isRunning) {
-            model.showError("You can't download a series while the downloader is running.")
+            model.openDownloadConfirm(series, null)
+            stage.close()
             return
         }
         model.urlTextField.text = seriesLink
         model.start()
         stage.close()
-        //model.showMessage("Started download", "Launched video downloader for: $seriesLink")
     }
 
     private fun loadSeriesImage(series: Series) {

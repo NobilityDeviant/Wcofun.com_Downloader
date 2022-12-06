@@ -15,7 +15,6 @@ public class Series {
     @Id
     public long id;
     public String link;
-
     public String movieLink;
     public String name;
     public String dateAdded;
@@ -27,26 +26,6 @@ public class Series {
     public int identity;
     @Transient
     public StringProperty episodeCount;
-
-    public boolean matches(Series series) {
-        return series.toReadable().equals(toReadable());
-    }
-
-    public String toReadable() {
-        String d = ";";
-        return link + d
-                + name + d
-                + episodes.size() + d
-                + imageLink + d
-                + description + d
-                + genres.size() + d
-                + identity;
-    }
-
-    public String toPrintable() {
-        String d = ";";
-        return link + d + name + d + episodes.size() + d + id;
-    }
 
     public Series() {}
 
@@ -64,6 +43,40 @@ public class Series {
         this.description = description;
         this.dateAdded = dateAdded;
         this.identity = identity;
+    }
+
+    public boolean matches(Series series) {
+        return series.toReadable().equals(toReadable());
+    }
+
+    public void update(Series series) {
+        this.link = series.link;
+        this.movieLink = series.movieLink;
+        this.name = series.name;
+        this.dateAdded = series.dateAdded;
+        this.imageLink = series.imageLink;
+        this.description = series.description;
+        this.identity = series.identity;
+        this.episodes.clear();
+        this.episodes.addAll(series.episodes);
+        this.genres.clear();
+        this.genres.addAll(series.genres);
+    }
+
+    public String toReadable() {
+        String d = ";";
+        return link + d
+                + name + d
+                + episodes.size() + d
+                + imageLink + d
+                + description + d
+                + genres.size() + d
+                + identity;
+    }
+
+    public String toPrintable() {
+        String d = ";";
+        return link + d + name + d + episodes.size() + d + id;
     }
 
     public boolean hasImageAndDescription() {

@@ -931,6 +931,32 @@ class Model {
         System.err.println("[${Tools.date}][${Tools.currentTime}][DEBUG NOTE]\n$s")
     }
 
+    fun debugWriteErrorToFile(s: String, fileName: String) {
+        val debugPath = File("./debug/")
+        if (!debugPath.exists()) {
+            if (!debugPath.mkdir()) {
+                debugErr("Failed to write error to file. Unable to find/create the debug folder.")
+                return
+            }
+        }
+        val debugFile = File(debugPath.absolutePath + "/$fileName.txt")
+        var bufferedWriter: BufferedWriter? = null
+        try {
+            bufferedWriter = BufferedWriter(FileWriter(debugFile, true))
+            bufferedWriter.newLine()
+            bufferedWriter.newLine()
+            bufferedWriter.write("[${Tools.date}][${Tools.currentTime}][DEBUG ERROR]")
+            bufferedWriter.newLine()
+            bufferedWriter.write(s)
+            bufferedWriter.flush()
+            debugNote("Successfully wrote error to file: ${debugFile.absolutePath}")
+        } catch (e: Exception) {
+            debugErr("Failed to write error to file.", e)
+        } finally {
+            bufferedWriter?.close()
+        }
+    }
+
     val updateManager = UpdateManager(this)
 
     init {

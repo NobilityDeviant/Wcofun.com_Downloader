@@ -77,12 +77,12 @@
                   <Insets bottom="5.0" right="5.0" />
                </HBox.margin>
             </Button>
-            <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#visitUrl" prefHeight="41.0" prefWidth="130.0" stylesheets="@../css/button.css" text="Visit Series URL" textAlignment="CENTER">
+            <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#urlOptions" prefHeight="41.0" prefWidth="130.0" stylesheets="@../css/button.css" text="URL Options" textAlignment="CENTER">
                <HBox.margin>
                   <Insets bottom="3.0" left="5.0" right="5.0" />
                </HBox.margin>
             </Button>
-            <Button alignment="CENTER" contentDisplay="CENTER" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#copyUrl" prefHeight="41.0" prefWidth="130.0" stylesheets="@../css/button.css" text="Copy Series URL" textAlignment="CENTER">
+            <Button alignment="CENTER" contentDisplay="CENTER" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#updateDetails" prefHeight="41.0" prefWidth="130.0" stylesheets="@../css/button.css" text="Update Details" textAlignment="CENTER">
                <HBox.margin>
                   <Insets bottom="3.0" left="5.0" />
                </HBox.margin>

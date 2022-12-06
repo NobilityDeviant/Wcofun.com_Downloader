@@ -136,6 +136,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
             }
             if (!foundVideoFrame) {
                 model.debugErr("No flag was found. IFrame not found in webpage.")
+                model.debugWriteErrorToFile("Flag Not Found:\n" + driver.pageSource, "source")
                 println("Failed to find video frame for $link. Retrying...")
                 retries++
                 model.decrementDownloadsInProgress()

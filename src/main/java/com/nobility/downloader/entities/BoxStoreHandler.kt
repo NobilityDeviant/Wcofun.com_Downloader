@@ -202,6 +202,20 @@ class BoxStoreHandler(model: Model) {
         return false
     }
 
+    fun addOrUpdateLink(url: String, identity: SeriesIdentity): Boolean {
+        val link = linkForSeriesUrl(url)
+        if (link == null) {
+            linksBox.put(CategoryLink(url, identity.type))
+            return true
+        } else {
+            link.url = url
+            link.type = identity.type
+            linksBox.put(link)
+            return true
+        }
+        return false
+    }
+
     fun addLinks(list: List<String>, identity: SeriesIdentity): Int {
         var added = 0
         for (s in list) {
@@ -221,7 +235,6 @@ class BoxStoreHandler(model: Model) {
                     return it.findUnique()
                 }
         } catch (ignored: Exception) {
-            ignored.printStackTrace()
         }
         return null
     }

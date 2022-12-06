@@ -51,32 +51,46 @@ class WcoController : Initializable {
 
     @FXML
     private lateinit var seriesTable: TableView<Series>
+
     @FXML
     private lateinit var coverColumn: TableColumn<Series, ImageView>
+
     @FXML
     private lateinit var nameColumn: TableColumn<Series, TextFlow>
+
     @FXML
     private lateinit var descriptionColumn: TableColumn<Series, TextArea>
+
     @FXML
     private lateinit var genresColumn: TableColumn<Series, TextFlow>
+
     @FXML
     private lateinit var identityColumn: TableColumn<Series, TextFlow>
+
     @FXML
     private lateinit var episodesColumn: TableColumn<Series, TextFlow>
+
     @FXML
     private lateinit var searchTextField: TextField
+
     @FXML
     private lateinit var resultsLabel: Label
+
     @FXML
     private lateinit var dubbedButton: Button
+
     @FXML
     private lateinit var subbedButton: Button
+
     @FXML
     private lateinit var cartoonButton: Button
+
     @FXML
     private lateinit var movieButton: Button
+
     @FXML
     private lateinit var recentButton: Button
+
     @FXML
     private lateinit var uncategorizedButton: Button
     private lateinit var model: Model
@@ -140,8 +154,10 @@ class WcoController : Initializable {
                         checkForNewEpisodes.onAction =
                             EventHandler {
                                 if (checkingSize >= 3) {
-                                    model.showError("You can't check for new updates for more than 3 series at a time." +
-                                            "\nPlease wait for the others to finish.")
+                                    model.showError(
+                                        "You can't check for new updates for more than 3 series at a time." +
+                                                "\nPlease wait for the others to finish."
+                                    )
                                     return@EventHandler
                                 }
                                 model.toast("Checking for new episodes... Please wait.", stage)
@@ -164,8 +180,6 @@ class WcoController : Initializable {
                                         }
                                         row.item.episodes.clear()
                                         row.item.episodes.addAll(result.data.episodes)
-                                        buddyHandler.kill()
-                                        checkingSize--
                                         withContext(Dispatchers.JavaFx) {
                                             row.item.updateEpisodeCountValue()
                                             model.showMessage(
@@ -174,7 +188,6 @@ class WcoController : Initializable {
                                             )
                                         }
                                     } else {
-                                        checkingSize--
                                         withContext(Dispatchers.JavaFx) {
                                             model.showMessage(
                                                 "Up to date!",
@@ -182,50 +195,92 @@ class WcoController : Initializable {
                                             )
                                         }
                                     }
+                                    buddyHandler.kill()
+                                    checkingSize--
                                 }
                             }
+                        val updateSeriesDetails = MenuItem("Update Details")
+                        updateSeriesDetails.onAction = EventHandler {
+                            if (checkingSize >= 3) {
+                                model.showError(
+                                    "You can't check for new updates for more than 3 series at a time." +
+                                            "\nPlease wait for the others to finish."
+                                )
+                                return@EventHandler
+                            }
+                            model.toast("Updating Series Details... Please wait.", stage)
+                            checkingSize++
+                            taskScope.launch {
+                                val buddyHandler = BuddyHandler(model)
+                                val result = buddyHandler.updateSeriesDetails(row.item)
+                                if (result.data != null) {
+                                    withContext(Dispatchers.JavaFx) {
+                                        row.item.update(result.data)
+                                        row.item.updateEpisodeCountValue()
+                                        model.showMessage(
+                                            "Success",
+                                            "Successfully updated details for: ${row.item.name}."
+                                        )
+                                    }
+                                } else {
+                                    withContext(Dispatchers.JavaFx) {
+                                        model.showError("Failed to update details for ${row.item.name}. Error: ${result.message}")
+                                    }
+                                }
+                                buddyHandler.kill()
+                                checkingSize--
+                            }
+                        }
                         menu.items.clear()
                         menu.items.addAll(
                             seriesDetails,
                             openLink,
                             copyLink,
                             downloadSeries,
-                            checkForNewEpisodes
+                            checkForNewEpisodes,
+                            updateSeriesDetails
                         )
-                        if (SeriesIdentity.isFilteredType(row.item.identity)) {
-                            val moveToCategory = MenuItem("Move To Category")
-                            moveToCategory.onAction = EventHandler {
-                                model.showChoice(
-                                    "Move To Category",
-                                    "You have the option to label this series.",
-                                    Option("Dubbbed") {
-                                        val series = row.item
-                                        series.identity = SeriesIdentity.DUBBED.type
-                                        model.settings().wcoHandler.addOrUpdateSeries(series)
-                                        model.toast("Successfully changed identity to Dubbed.", stage)
-                                    },
-                                    Option("Subbed") {
-                                        val series = row.item
-                                        series.identity = SeriesIdentity.SUBBED.type
-                                        model.settings().wcoHandler.addOrUpdateSeries(series)
-                                        model.toast("Successfully changed identity to Subbed.", stage)
-                                    },
-                                    Option("Cartoon") {
-                                        val series = row.item
-                                        series.identity = SeriesIdentity.CARTOON.type
-                                        model.settings().wcoHandler.addOrUpdateSeries(series)
-                                        model.toast("Successfully changed identity to Cartoon.", stage)
-                                    },
-                                    Option("Movie") {
-                                        val series = row.item
-                                        series.identity = SeriesIdentity.MOVIE.type
-                                        model.settings().wcoHandler.addOrUpdateSeries(series)
-                                        model.toast("Successfully changed identity to Movie.", stage)
-                                    }
-                                )
-                            }
-                            menu.items.add(moveToCategory)
+
+                        val moveToCategory = MenuItem("Move To Category")
+                        moveToCategory.onAction = EventHandler {
+                            model.showChoice(
+                                "Move To Category",
+                                "You have the option to label this series.",
+                                Option("Dubbbed") {
+                                    val series = row.item
+                                    val identity = SeriesIdentity.DUBBED
+                                    series.identity = identity.type
+                                    model.settings().wcoHandler.addOrUpdateSeries(series)
+                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.toast("Successfully changed identity to Dubbed.", stage)
+                                },
+                                Option("Subbed") {
+                                    val series = row.item
+                                    val identity = SeriesIdentity.SUBBED
+                                    series.identity = identity.type
+                                    model.settings().wcoHandler.addOrUpdateSeries(series)
+                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.toast("Successfully changed identity to Subbed.", stage)
+                                },
+                                Option("Cartoon") {
+                                    val series = row.item
+                                    val identity = SeriesIdentity.CARTOON
+                                    series.identity = identity.type
+                                    model.settings().wcoHandler.addOrUpdateSeries(series)
+                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.toast("Successfully changed identity to Cartoon.", stage)
+                                },
+                                Option("Movie") {
+                                    val series = row.item
+                                    val identity = SeriesIdentity.MOVIE
+                                    series.identity = identity.type
+                                    model.settings().wcoHandler.addOrUpdateSeries(series)
+                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.toast("Successfully changed identity to Movie.", stage)
+                                }
+                            )
                         }
+                        menu.items.add(moveToCategory)
                         if (model.developerMode) {
                             val remove = MenuItem("Remove From DB")
                             remove.onAction = EventHandler {
@@ -273,8 +328,10 @@ class WcoController : Initializable {
                 image.fitWidth = coverColumn.width
             }
             try {
-                val file = File(  model.settings().wcoHandler.seriesImagesPath +
-                        Tools.titleForImages(it.value.name))
+                val file = File(
+                    model.settings().wcoHandler.seriesImagesPath +
+                            Tools.titleForImages(it.value.name)
+                )
                 if (file.exists()) {
                     image.image = Image(
                         file.inputStream()
@@ -353,9 +410,11 @@ class WcoController : Initializable {
             textArea.isWrapText = true
             textArea.prefWidth = descriptionColumn.width
             textArea.prefHeight = rowHeight
-            textArea.stylesheets.add(Main::class.java.getResource(
-                Model.CSS_PATH + "textarea.css"
-            )?.toString() ?: "")
+            textArea.stylesheets.add(
+                Main::class.java.getResource(
+                    Model.CSS_PATH + "textarea.css"
+                )?.toString() ?: ""
+            )
             textArea.text = it.value.description
             return@setCellValueFactory SimpleObjectProperty(textArea)
         }
@@ -538,12 +597,12 @@ class WcoController : Initializable {
                 return@setPredicate true
             }
             val filter: String = search.lowercase(Locale.getDefault())
-            val genresFilter = it.genres.hasA {genre ->
+            val genresFilter = it.genres.hasA { genre ->
                 genre.name.lowercase(Locale.getDefault()).contains(filter)
             }
             val identity = SeriesIdentity.idForType(it.identity)
             (identity.toString().lowercase(Locale.getDefault()).contains(filter)
-                    ||genresFilter
+                    || genresFilter
                     || it.name.lowercase(Locale.getDefault()).contains(filter))
         }
     }
