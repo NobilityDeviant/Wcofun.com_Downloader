@@ -25,7 +25,7 @@ jar {
     }
     manifest {
         attributes (
-                    "Manifest-Version": "1.5.2",
+                    "Manifest-Version": "1.5.3",
                     "Main-Class": "com.nobility.downloader.Main"
                 )
     }
@@ -38,7 +38,7 @@ jar {
 }
 
 group 'com.nobility'
-version '1.5.2'
+version '1.5.3'
 
 repositories {
     mavenCentral()
