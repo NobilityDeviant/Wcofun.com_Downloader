@@ -52,7 +52,7 @@ You can download the jar file only, but I suggest getting the full package.
 
 If double clicking on the jar file doesn't run the app, you will need to execute a command.
 
-Inside your CMD or Terminal, navigate the the jad and type:
+Inside your CMD or Terminal, navigate to the location of the jar and type:
 
 > java -jar TWCD.jar
 
