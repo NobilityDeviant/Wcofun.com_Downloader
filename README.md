@@ -41,7 +41,7 @@ This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
 > You must install the browser. A portable version will not work.
 > Updating the browser to it's latest version is recommended.
 
-This program relies heavily on Selenium (https://www.selenium.dev). 
+This program relies heavily on Selenium: https://www.selenium.dev 
 > Selenium allows this program to scrape website data with javascript enabled. Unfortunately we need javascript so selenium is crucial.
 
 The driver for the chosen browser will automatically download with the help of: https://github.com/bonigarcia/webdrivermanager
