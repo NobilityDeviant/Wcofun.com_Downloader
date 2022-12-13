@@ -72,7 +72,7 @@ A lot of work was put into this one!
 I manually downloaded so many videos from wco that I decided to create this bad boy.
 
 This downloader is multi-threaded, customizable, resizeable, fast and easy to use!
-Utilizes Kotlin's coroutines for a fast and smooth experience.
+It also utilizes Kotlin's coroutines for a fast and smooth experience.
 
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
