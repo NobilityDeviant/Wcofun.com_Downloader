@@ -31,7 +31,7 @@ Make sure you choose the Full JRE or Full JDK for development:
 
 ![Alt text](images/liberica.png?raw=true "Liberica")
 
-If you editing the program you will need an IDE.
+If you're editing the program you will need an IDE.
 
 I use IntelliJ as an IDE: https://www.jetbrains.com/idea/download/ - The Community Version will work just fine.
 
