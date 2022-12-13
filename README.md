@@ -41,10 +41,14 @@ This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
 > You must install the browser. A portable version will not work.
 > Updating the browser to it's latest version is recommended.
 
+# Credits
+
 This program relies heavily on Selenium: https://www.selenium.dev 
 > Selenium allows this program to scrape website data with javascript enabled. Unfortunately we need javascript so selenium is crucial.
 
 The driver for the chosen browser will automatically download with the help of: https://github.com/bonigarcia/webdrivermanager
+
+# Download
 
 Download the latest release here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
 
@@ -59,6 +63,8 @@ Inside your CMD or Terminal, navigate to the location of the jar and type:
 and press enter.
 
 You can usually hold shift and right click inside the folder where jar is to open the CMD or Terminal in that location.
+
+# Home
 
 ![Alt text](images/home.png?raw=true "Home Tab")
 
