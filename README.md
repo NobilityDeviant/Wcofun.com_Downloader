@@ -62,7 +62,7 @@ Inside your CMD or Terminal, navigate to the location of the jar and type:
 
 and press enter.
 
-You can usually hold shift and right click inside the folder where jar is to open the CMD or Terminal in that location.
+You can usually hold shift and right click inside the folder where the jar is to open the CMD or Terminal in that location.
 
 # Home
 
