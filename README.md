@@ -10,7 +10,7 @@ First off you are wondering if this website is illegal? Yes it sure is.
 
 The thing is you won't get in trouble for using it or downloading from it. It is not like torrents because no one can track you, so don't worry.
 
-Some countries do block it though, so use a VPN of your choice before downloading anything.
+Some countries do block it though. If you can't access the website then use a VPN of your choice before downloading anything.
 
 I suggest https://protonvpn.com because it is free and fast.
 
