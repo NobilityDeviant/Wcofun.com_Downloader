@@ -48,7 +48,7 @@ This program relies heavily on Selenium: https://www.selenium.dev
 
 The driver for the chosen browser will automatically download with the help of: https://github.com/bonigarcia/webdrivermanager
 
-# Download
+# Download And Run
 
 Download the latest release here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
 
