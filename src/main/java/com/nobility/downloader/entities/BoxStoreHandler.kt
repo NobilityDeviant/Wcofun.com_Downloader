@@ -204,16 +204,15 @@ class BoxStoreHandler(model: Model) {
 
     fun addOrUpdateLink(url: String, identity: SeriesIdentity): Boolean {
         val link = linkForSeriesUrl(url)
-        if (link == null) {
+        return if (link == null) {
             linksBox.put(CategoryLink(url, identity.type))
-            return true
+            true
         } else {
             link.url = url
             link.type = identity.type
             linksBox.put(link)
-            return true
+            true
         }
-        return false
     }
 
     fun addLinks(list: List<String>, identity: SeriesIdentity): Int {

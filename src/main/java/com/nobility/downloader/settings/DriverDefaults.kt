@@ -20,7 +20,8 @@ enum class DriverDefaults {
         }
 
         fun isChromium(defaults: DriverDefaults): Boolean {
-            return defaults == CHROME || defaults == CHROMIUM || defaults == EDGE || defaults == OPERA
+            return defaults == CHROME || defaults == CHROMIUM
+                    || defaults == EDGE || defaults == OPERA
         }
 
         fun allDrivers(): List<String> {

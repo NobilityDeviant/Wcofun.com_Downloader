@@ -22,5 +22,6 @@ enum class Defaults(
     DOWNLOADTHREADS("download_threads", 2),
     LASTDOWNLOAD("last_dl", ""),
     TOASTTRANSPARENCY("toast_trans", 50.toDouble()),
-    DRIVER("driver", DriverDefaults.CHROME.name)
+    DRIVER("driver", DriverDefaults.CHROME.name),
+    DEBUGMESSAGES("debug_messages", false)
 }

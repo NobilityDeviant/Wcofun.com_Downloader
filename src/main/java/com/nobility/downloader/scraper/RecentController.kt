@@ -93,12 +93,12 @@ class RecentController(
                         downloadSeries.onAction =
                             EventHandler {
                                 if (model.isRunning) {
-                                    model.toast("You can't download new series while the downloader is running.")
+                                    model.toast("You can't download new series while the downloader is running.", stage)
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link
                                 model.start()
-                                model.toast("Launched video downloader for: ${row.item.link}")
+                                model.toast("Launched video downloader for: ${row.item.link}", stage)
                             }
                         menu.items.addAll(
                             seriesDetails,
@@ -150,13 +150,14 @@ class RecentController(
                             MenuItem("Download Episode")
                         downloadEpisode.onAction =
                             EventHandler {
+                                //todo remove this
                                 if (model.isRunning) {
-                                    model.toast("You can't download new episodes while the downloader is running.")
+                                    model.toast("You can't download new episodes while the downloader is running.", stage)
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link
                                 model.start()
-                                model.toast("Launched video downloader for: ${row.item.link}")
+                                model.toast("Launched video downloader for: ${row.item.link}", stage)
                             }
                         menu.items.addAll(
                             openLink,

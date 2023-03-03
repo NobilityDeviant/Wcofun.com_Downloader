@@ -33,7 +33,7 @@ import java.util.*
 
 class SeriesDetailsController : DriverBase(), Initializable {
 
-    private val taskScope = CoroutineScope(Dispatchers.Default)
+    private val taskScope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var stage: Stage
     private lateinit var seriesLink: String
@@ -258,7 +258,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
         taskScope.launch {
             val buddyHandler = BuddyHandler(model)
             val result = buddyHandler.updateSeriesDetails(series)
-            buddyHandler.kill()
+            buddyHandler.taskScope.cancel()
             if (result.data != null) {
                 withContext(Dispatchers.JavaFx) {
                     series.update(result.data)

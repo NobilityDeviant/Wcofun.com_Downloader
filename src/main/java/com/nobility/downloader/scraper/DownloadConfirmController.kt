@@ -210,7 +210,7 @@ class DownloadConfirmController(
                     seriesWco.episodes.addAll(result.data.episodes)
                     seriesWco.episodes.applyChangesToDb()
                 }
-                buddyHandler.kill()
+                buddyHandler.taskScope.cancel()
                 withContext(Dispatchers.JavaFx) {
                     downloadButton.isDisable = false
                     checkButton.isDisable = false

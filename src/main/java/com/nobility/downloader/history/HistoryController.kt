@@ -125,7 +125,7 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
                                     seriesWco?.episodes?.applyChangesToDb()
                                     row.item.episodes.clear()
                                     row.item.episodes.addAll(result.data.episodes)
-                                    buddyHandler.kill()
+                                    buddyHandler.taskScope.cancel()
                                     checkingSize--
                                     withContext(Dispatchers.JavaFx) {
                                         row.item.updateEpisodeCountValue()

@@ -36,11 +36,8 @@ import javafx.scene.text.TextAlignment
 import javafx.scene.text.TextFlow
 import javafx.stage.Stage
 import javafx.util.Callback
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.net.URL
@@ -195,7 +192,7 @@ class WcoController : Initializable {
                                             )
                                         }
                                     }
-                                    buddyHandler.kill()
+                                    buddyHandler.taskScope.cancel()
                                     checkingSize--
                                 }
                             }
@@ -227,7 +224,7 @@ class WcoController : Initializable {
                                         model.showError("Failed to update details for ${row.item.name}. Error: ${result.message}")
                                     }
                                 }
-                                buddyHandler.kill()
+                                buddyHandler.taskScope.cancel()
                                 checkingSize--
                             }
                         }
@@ -467,7 +464,7 @@ class WcoController : Initializable {
                     loading = false
                     resultsLabel.text = "Failed to retrieve recent data..."
                     model.showError(
-                        "Failed to retrive recent data. Error: ${result.message}",
+                        "Failed to retrieve recent data. Error: ${result.message}",
                     )
                 }
             }

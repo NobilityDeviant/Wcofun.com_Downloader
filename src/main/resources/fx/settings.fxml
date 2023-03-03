@@ -16,7 +16,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="556.0" prefWidth="678.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="605.0" prefWidth="678.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
   <tabs>
     <Tab text="Main Settings">
          <content>
@@ -116,6 +116,18 @@
                         <HBox>
                            <children>
                               <CheckBox fx:id="cbBypassDiskSpaceCheck" mnemonicParsing="false" stylesheets="@../css/checkbox.css" text="Bypass Disk Space Check" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                 </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This is used in case the free space check doesn't work as intended. Only use this if you know you have enough space. (150MB+)" />
+                                 </tooltip>
+                              </CheckBox>
+                           </children>
+                        </HBox>
+                        <HBox>
+                           <children>
+                              <CheckBox fx:id="cbDebug" mnemonicParsing="false" stylesheets="@../css/checkbox.css" text="Enable Debug Messages" textFill="WHITE">
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
                                  </HBox.margin>

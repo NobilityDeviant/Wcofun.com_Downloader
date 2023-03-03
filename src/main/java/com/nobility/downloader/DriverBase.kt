@@ -66,12 +66,13 @@ abstract class DriverBase {
             chromeOptions.addArguments("--disable-dev-shm-usage")
             chromeOptions.addArguments("--disable-browser-side-navigation")
             chromeOptions.addArguments("--disable-gpu")
-            chromeOptions.addArguments("enable-automation")
             chromeOptions.addArguments("--mute-audio")
             chromeOptions.addArguments("user-agent=$userAgent")
             if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()
                 && model.settings().booleanSetting(Defaults.ENABLEPROXY)) {
-                chromeOptions.addArguments("--proxy-server=" + model.settings().stringSetting(Defaults.PROXY))
+                chromeOptions.addArguments(
+                    "--proxy-server=" + model.settings().stringSetting(Defaults.PROXY)
+                )
             }
             _driver = if (driverDefaults == DriverDefaults.EDGE) {
                 val edgeOptions = EdgeOptions()
@@ -82,7 +83,6 @@ abstract class DriverBase {
                 edgeOptions.addArguments("--disable-dev-shm-usage")
                 edgeOptions.addArguments("--disable-browser-side-navigation")
                 edgeOptions.addArguments("--disable-gpu")
-                //edgeOptions.addArguments("enable-automation");
                 edgeOptions.addArguments("--mute-audio")
                 edgeOptions.addArguments("--user-agent=$userAgent")
                 if (model.settings().stringSetting(Defaults.PROXY).isNotEmpty()

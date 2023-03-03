@@ -8,14 +8,13 @@ import javafx.event.ActionEvent
 import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.fxml.Initializable
-import javafx.scene.control.Button
-import javafx.scene.control.CheckBox
-import javafx.scene.control.ChoiceBox
-import javafx.scene.control.Slider
-import javafx.scene.control.TextField
+import javafx.scene.control.*
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.io.File
 import java.net.URL
@@ -64,6 +63,9 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
 
     @FXML
     private lateinit var cbEnableProxy: CheckBox
+
+    @FXML
+    private lateinit var cbDebug: CheckBox
 
     @FXML
     private lateinit var choiceBrowser: ChoiceBox<String>
@@ -151,6 +153,11 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, _: Boolean? ->
                 buttonSaveSettings.isDisable = !settingsChanged()
             }
+        cbDebug.isSelected = model.settings().booleanSetting(Defaults.DEBUGMESSAGES)
+        cbDebug.selectedProperty()
+            .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, _: Boolean? ->
+                buttonSaveSettings.isDisable = !settingsChanged()
+            }
         choiceBrowser.items.addAll(DriverDefaults.allDrivers())
         choiceBrowser.value = model.settings().stringSetting(Defaults.DRIVER)
         choiceBrowser.selectionModel.selectedItemProperty()
@@ -160,8 +167,10 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
         stage.onCloseRequest = EventHandler {
             if (settingsChanged()) {
                 model.showConfirm("You have unsaved changes. Would you like to save your settings?", {
-                    if (saveSettings()) {
-                        stage.close()
+                    model.taskScope.launch(Dispatchers.JavaFx) {
+                        if (saveSettings()) {
+                            stage.close()
+                        }
                     }
                 }) { stage.close() }
             } else {
@@ -183,6 +192,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     model.toast("Cleared $size series history(s) from your settings.", stage)
                 }
             }
+
             buttonClearDownloads -> {
                 if (model.settings().downloadBox.isEmpty) {
                     return
@@ -199,18 +209,25 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     model.toast("Cleared $size downloads from your settings.", stage)
                 }
             }
+
             buttonChooseDownloadFolder -> {
                 setDownloadFolder()
             }
+
             buttonSaveSettings -> {
-                saveSettings()
+                model.taskScope.launch(Dispatchers.JavaFx) {
+                    saveSettings()
+                }
             }
+
             buttonStopChrome -> {
                 stopChrome()
             }
+
             viewScrapedDataButton -> {
                 model.openWco()
             }
+
             checkHistoryForEpisodesButton -> {
                 if (!model.settings().seriesBox.isEmpty) {
                     model.downloadNewEpisodesForSeries(model.settings().seriesBox.all)
@@ -219,16 +236,21 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     model.toast("You don't have any series history.", stage)
                 }
             }
+
             devModeButton -> {
-                model.showConfirm("Are you sure you want to turn on developer mode?" +
-                        "\nThis is just used for certain hidden options. You will most likely not notice a difference.") {
+                model.showConfirm(
+                    "Are you sure you want to turn on developer mode?" +
+                            "\nThis is just used for certain hidden options. You will most likely not notice a difference."
+                ) {
                     model.developerMode = true
                     model.toast("Developer Mode Activated", stage)
                 }
             }
+
             toastButton -> {
                 model.toast("Preview", stage, toastSlider.value)
             }
+
             updateWcoButtonn -> {
                 if (model.isUpdatingWco) {
                     return
@@ -248,16 +270,18 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     )
                     return
                 }
-                model.showConfirm("Do you really want to update the wco db? " +
-                        "This is a very intensive process which requires a decent pc.") {
+                model.showConfirm(
+                    "Do you really want to update the wco db? " +
+                            "This is a very intensive process which requires a decent pc."
+                ) {
                     val seriesScraper = SeriesScraper(model)
                     model.taskScope.launch {
                         seriesScraper.updateWcoDb()
                     }
                     model.toast(
                         "The updater has been launched. " +
-                            "This will prevent the downloader from running. " +
-                            "Please keep an eye out for the consoles messages.",
+                                "This will prevent the downloader from running. " +
+                                "Please keep an eye out for the consoles messages.",
                         stage
                     )
                 }
@@ -311,7 +335,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     /**
      * Main button save handle
      */
-    private fun saveSettings(): Boolean {
+    private suspend fun saveSettings(): Boolean {
         if (fieldDownloadThreads.text.isEmpty()) {
             fieldDownloadThreads.text = Defaults.DOWNLOADTHREADS.value.toString()
         }
@@ -329,24 +353,32 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             setDownloadFolder()
             return false
         }
-        if (!downloadFolder.canWrite()) {
-            model.showError(
-                """
-    The download folder doesn't allow write permissions.
-    If this is a USB or SD Card then disable write protection.
-    Try selecting a folder in the user or home folder. Those are usually not restricted.
-    """.trimIndent()
-            )
-            return false
-        }
-        if (bytesToMB(downloadFolder.usableSpace) < 150) {
-            model.showError(
-                """
-    The download folder requires at least 150MB of free space.
-    Most videos average around 100MB.
-    """.trimIndent()
-            )
-            return false
+        if (!cbBypassDiskSpaceCheck.isSelected) {
+            val usableSpace = downloadFolder.usableSpace
+            if (usableSpace != 0L) {
+                if (bytesToMB(usableSpace) < 150) {
+                    model.showError(
+                        "The download folder in your settings requires at least 150MB of free space." +
+                                "\nMost videos average around 100MB." +
+                                "\nIf you are having issues with this, open the settings (CTRL + S) and enable Bypass Disk Space Check"
+                    )
+                    return false
+                }
+            } else {
+                val freeSpace = downloadFolder.freeSpace
+                if (freeSpace != 0L) {
+                    if (bytesToMB(freeSpace) < 150) {
+                        model.showError(
+                            "The download folder in your settings requires at least 150MB of free space." +
+                                    "\nMost videos average around 100MB." +
+                                    "\nIf you are having issues with this, open the settings (CTRL + S) and enable Bypass Disk Space Check"
+                        )
+                        return false
+                    }
+                } else {
+                    println("[WARNING] Failed to check for free space. Make sure you have enough space to download videos. (150MB+)")
+                }
+            }
         }
         if (!fieldProxy.text.isNullOrEmpty() && cbEnableProxy.isSelected) {
             when (isValidProxy(fieldProxy.text)) {
@@ -424,6 +456,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                 || model.settings().stringSetting(Defaults.DRIVER) != choiceBrowser.value
                 || model.settings().doubleSetting(Defaults.TOASTTRANSPARENCY) != toastSlider.value
                 || model.settings().booleanSetting(Defaults.BYPASSFREESPACECHECK) != cbBypassDiskSpaceCheck.isSelected
+                || model.settings().booleanSetting(Defaults.DEBUGMESSAGES) != cbDebug.isSelected
     }
 
     /**
@@ -469,7 +502,9 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
         buttonSaveSettings.isDisable = !settingsChanged()
     }
 
-    private fun isValidProxy(s: String): Int {
+    private suspend fun isValidProxy(
+        s: String
+    ): Int = withContext(Dispatchers.IO) {
         model.toast("Checking proxy...")
         val split: Array<String>
         val ip: String
@@ -479,12 +514,12 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             ip = split[0]
             port = split[1].toInt()
             if (port < 0 || port > 65535) {
-                return 2
+                return@withContext 2
             }
         } catch (ignored: Exception) {
-            return -1
+            return@withContext -1
         }
-        return try {
+        return@withContext try {
             val response = Jsoup.connect(Model.WEBSITE)
                 .timeout(model.settings().integerSetting(Defaults.TIMEOUT) * 1000)
                 .proxy(ip, port)

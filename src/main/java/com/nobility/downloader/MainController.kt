@@ -127,9 +127,10 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
         dateColumn.comparator = dateComparator
         downloadTable.setRowFactory {
             val row = TableRow<Download>()
+            row.isCache = false
             row.emptyProperty()
                 .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, isEmpty: Boolean? ->
-                    if (!isEmpty!!) {
+                    if (isEmpty == false) {
                         if (row.item != null) {
                             val menu = ContextMenu()
                             val openFolder = MenuItem("Open Folder")
@@ -287,12 +288,19 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                 downloadTable.refresh()
             }
         val downloadFolder = File(model.settings().stringSetting(Defaults.SAVEFOLDER))
+        if (!downloadFolder.exists()) {
+            println("Your download folder no longer exists." +
+                    "\n${downloadFolder.absolutePath}")
+            println("Your download folder has been reset to the default.")
+            model.settings().setSetting(Defaults.SAVEFOLDER, Defaults.SAVEFOLDER.value)
+        }
         if (!downloadFolder.canWrite()) {
             println(
                 """
     Your download folder doesn't allow write permissions.
     If this is a USB or SD Card then disable write protection.
     Try selecting a folder in the user or home folder. Those are usually not restricted.
+    ${downloadFolder.absolutePath}
     """.trimIndent()
             )
             println("Your download folder has been reset to the default.")
@@ -361,6 +369,8 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
         if (!model.isRunning) {
             model.start()
         } else {
+            //todo make a way to do this in the background without effecting the current dl
+            //if found in cache just launch
             model.showError("Downloader is already running. Unable to start.")
         }
     }

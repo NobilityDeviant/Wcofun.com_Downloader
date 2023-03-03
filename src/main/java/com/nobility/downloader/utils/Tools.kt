@@ -83,10 +83,6 @@ object Tools {
     @JvmField
     val percentFormat = DecimalFormat("#.##%")
 
-    fun bytesToKB(bytes: Long): Double {
-        return (bytes / 1024L).toDouble()
-    }
-
     fun bytesToMB(bytes: Long): Double {
         val kb = (bytes / 1024L).toInt()
         return (kb / 1024L).toDouble()
@@ -246,7 +242,7 @@ object Tools {
         val e1Text = (e1.children.get(0) as Text).text
         val e2Text = (e2.children.get(0) as Text).text
         val key = "Season"
-        println(e1Text + ":" + e2Text)
+        println("$e1Text:$e2Text")
         if (e1Text.contains(key) && !e2Text.contains(key)) {
             return@Comparator 0
         } else if (e2Text.contains(key) && !e1Text.contains(key)) {

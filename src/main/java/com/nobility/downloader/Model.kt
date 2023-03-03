@@ -920,6 +920,9 @@ class Model {
     }
 
     fun debugErr(s: String, e: Exception? = null) {
+        if (!settings().booleanSetting(Defaults.DEBUGMESSAGES)) {
+            return
+        }
         System.err.println("[${Tools.date}][${Tools.currentTime}][DEBUG ERROR]\n$s")
         if (e != null) {
             System.err.println("Stacktrace: ")
@@ -928,10 +931,16 @@ class Model {
     }
 
     fun debugNote(s: String) {
+        if (!settings().booleanSetting(Defaults.DEBUGMESSAGES)) {
+            return
+        }
         System.err.println("[${Tools.date}][${Tools.currentTime}][DEBUG NOTE]\n$s")
     }
 
     fun debugWriteErrorToFile(s: String, fileName: String) {
+        if (!settings().booleanSetting(Defaults.DEBUGMESSAGES)) {
+            return
+        }
         val debugPath = File("./debug/")
         if (!debugPath.exists()) {
             if (!debugPath.mkdir()) {

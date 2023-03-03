@@ -25,7 +25,7 @@ jar {
     }
     manifest {
         attributes (
-                    "Manifest-Version": "1.5.3",
+                    "Manifest-Version": "1.5.4",
                     "Main-Class": "com.nobility.downloader.Main"
                 )
     }
@@ -38,15 +38,13 @@ jar {
 }
 
 group 'com.nobility'
-version '1.5.3'
+version '1.5.4'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    //dont change this version. it fixes a selenium bug
-    //implementation 'com.google.guava:guava:30.1.1-jre'
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.3'
     implementation 'org.seleniumhq.selenium:selenium-java:4.6.0'
     //ignore this warning it's not dangerous

@@ -18,7 +18,7 @@ class BuddyHandler(private val model: Model) {
     var url: String? = null
     private var series: Series? = null
     private var episode: Episode? = null
-    private val taskScope = CoroutineScope(Dispatchers.Default)
+    val taskScope = CoroutineScope(Dispatchers.Default)
 
     suspend fun update(url: String) {
         this.url = url

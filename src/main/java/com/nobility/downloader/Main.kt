@@ -35,13 +35,12 @@ class Main : Application() {
                 return@Callback controllerType.getDeclaredConstructor().newInstance()
             } catch (e: Exception) {
                 System.err.println("Failed to load MainController. Error: " + e.message)
-                e.printStackTrace(System.err)
+                e.printStackTrace()
                 exitProcess(-2)
             }
         }
         val root = loader.load<Parent>()
         val scene = Scene(root)
-        //controller.setMainStage(primaryStage)
         primaryStage.scene = scene
         scene.stylesheets.add(javaClass.getResource(Model.CSS_PATH + "contextmenu.css")?.toString() ?: "")
         primaryStage.title = "WcoFun Downloader By Nobility ver. " + UpdateManager.CURRENT_VERSION

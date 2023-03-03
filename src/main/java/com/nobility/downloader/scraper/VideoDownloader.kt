@@ -143,9 +143,15 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 continue
             }
             var videoLink: String
+            var videoLinkError: String
             try {
                 val videoPlayer = driver.findElement(By.id(videoJs))
+                //this makes it wait so it doesn't throw an error everytime
+                wait.pollingEvery(Duration.ofSeconds(1))
+                    .withTimeout(Duration.ofSeconds(15))
+                    .until(ExpectedConditions.attributeToBeNotEmpty(videoPlayer, "src"))
                 videoLink = videoPlayer.getAttribute("src")
+                videoLinkError = videoPlayer.getAttribute("innerHTML")
             } catch (e: Exception) {
                 model.debugErr("Found frame, but failed to find $videoJs", e)
                 println("Failed to find video player inside frame for $link. Retrying...")
@@ -154,7 +160,10 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 continue
             }
             if (videoLink.isEmpty()) {
-                model.debugErr("Found $videoJs, but the video link was empty? Might be lag.")
+                model.debugErr("Found $videoJs, but the video link was empty? No javascript found?")
+                if (videoLinkError.isNotEmpty()) {
+                    model.debugErr("Empty link source: \n${videoLinkError.trim()}")
+                }
                 println("Failed to find video link for $link. Retrying...")
                 retries++
                 model.decrementDownloadsInProgress()
