@@ -40,6 +40,8 @@ You will also need a browser of your choice.
 This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
 > You must install the browser. A portable version will not work.
 > Updating the browser to it's latest version is recommended.
+> NOTE: Not all browsers contain the freedom of Chrome based browsers. If firefox or safari don't work, try using Chrome instead.
+> For Windows you can just select Edge because it comes pre-installed.
 
 # Credits
 
