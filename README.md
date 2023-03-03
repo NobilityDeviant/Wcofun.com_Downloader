@@ -6,7 +6,7 @@ This program is used to download videos and series from https://www.wcofun.net/
 
 If you check that website out, it's one of the best video sites for free cartoons and anime.
 
-First off you are wondering if this website is illegal? Yes it sure is.
+First off, are you wondering if this website is illegal? Yes it sure is.
 
 The thing is you won't get in trouble for using it or downloading from it. It is not like torrents because no one can track you, so don't worry.
 
