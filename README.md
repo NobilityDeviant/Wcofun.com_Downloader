@@ -1,20 +1,71 @@
 # Wcofun.net Downloader
 
-Used to download videos and series from https://www.wcofun.net/
+The project name is a little misleading. The original website seems to change all the time, but it's too late to change it.
 
-Coded in JDK 8 and Kotlin.
+This program is used to download videos and series from https://www.wcofun.net/
 
-You need java 8 to run this program. https://www.java.com/en/download/manual.jsp
+If you check that website out, it's one of the best video sites for free cartoons and anime.
 
-You will need Chrome, Chromium, Opera, Edge, Firefox or Safari to use this program.
+First off, are you wondering if this website is illegal? Yes it sure is.
 
-> This program relies heavily on Selenium. The driver for the chosen browser will automatically download.
+The thing is you won't get in trouble for using it or downloading from it. It is not like torrents because no one can track you, so don't worry.
 
-Download the releases here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
+Some countries do block it though. If you can't access the website then use a VPN of your choice before downloading anything.
 
-JDK 8 is needed to compile it: https://www.openlogic.com/openjdk-downloads?field_java_parent_version_target_id=416&field_operating_system_target_id=All&field_architecture_target_id=All&field_java_package_target_id=All
+I suggest https://protonvpn.com because it is free and fast.
+
+# Requirements
+
+You need java 8, 9 or 10 to run this program. Java 8 is the most compatible.
+
+Anything higher than Java 10 or incomplete OpenJDK packages won't work due to the lack of an important library: Java FX
+
+I suggest downloading Java 8 directly from Oracle. Note: You need an account. https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html
+> If you are not going to edit the program, you just need the Java Runtime Environment else you can get the Java Development Kit which comes with the JRE.
+
+If you don't want to sign up for anything, you can use Liberica instead: https://bell-sw.com/pages/downloads/#downloads
+> Liberica is just another branch of OpenJDK, but it is managed better.
+
+Make sure you choose the Full JRE or Full JDK for development:
+> Anything else doesn't include Java FX.
+
+![Alt text](images/liberica.png?raw=true "Liberica")
+
+If you're editing the program you will need an IDE.
 
 I use IntelliJ as an IDE: https://www.jetbrains.com/idea/download/ - The Community Version will work just fine.
+
+You will also need a browser of your choice.
+
+This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
+> You must install the browser. A portable version will not work. Updating the browser to it's latest version is recommended.
+
+> NOTE: Not all browsers contain the freedom of Chrome based browsers. If firefox or safari don't work, try using Chrome instead.
+
+# Credits
+
+This program relies heavily on Selenium: https://www.selenium.dev 
+> Selenium allows this program to scrape website data with javascript enabled. Unfortunately we need javascript so selenium is crucial.
+
+The driver for the chosen browser will automatically download with the help of: https://github.com/bonigarcia/webdrivermanager
+
+# Download And Run
+
+Download the latest release here: https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases/
+
+You can download the jar file only, but I suggest getting the full package.
+
+If double clicking on the jar file doesn't run the app, you will need to execute a command.
+
+Inside your CMD or Terminal, navigate to the location of the jar and type:
+
+> java -jar TWCD.jar
+
+and press enter.
+
+You can usually hold shift and right click inside the folder where the jar is to open the CMD or Terminal in that location.
+
+# Home
 
 ![Alt text](images/home.png?raw=true "Home Tab")
 
@@ -22,7 +73,7 @@ A lot of work was put into this one!
 I manually downloaded so many videos from wco that I decided to create this bad boy.
 
 This downloader is multi-threaded, customizable, resizeable, fast and easy to use!
-Utilizes Kotlin's coroutines for a fast and smooth experience.
+It also utilizes Kotlin's coroutines for a fast and smooth experience.
 
 You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
