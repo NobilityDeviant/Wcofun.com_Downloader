@@ -22,7 +22,7 @@ class BuddyHandler(private val model: Model) {
 
     suspend fun update(url: String) {
         this.url = url
-        println("Launching BuddyHandler to handle the link(s).")
+        //println("Launching BuddyHandler to handle the link(s).")
         //all series links contains this key
         if (url.contains("/anime/")) {
             val cachedSeries = model.settings().wcoHandler.seriesForLink(url)
@@ -138,9 +138,8 @@ class BuddyHandler(private val model: Model) {
     }
 
     suspend fun updateSeriesDetails(
-        _series: Series
+        series: Series
     ): Resource<Series> = withContext(Dispatchers.IO) {
-        val series = _series
         println("Updating series details for ${series.name}")
         val scraper = LinkHandler(model)
         val result = scraper.handleLink(series.link, true)

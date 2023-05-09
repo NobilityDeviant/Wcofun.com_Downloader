@@ -20,6 +20,11 @@ import javax.net.ssl.X509TrustManager
 
 class UpdateManager(private val model: Model) {
 
+    companion object {
+        const val CURRENT_VERSION = "1.5.5"
+        const val RELEASES_LINK = "https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases"
+    }
+
     private val githubLatest = "https://api.github.com/repos/NobilityDeviant/Wcofun.com_Downloader/releases/latest"
     var latestUpdate: Update? = null
 
@@ -147,10 +152,5 @@ class UpdateManager(private val model: Model) {
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
         } catch (ignored: Exception) {
         }
-    }
-
-    companion object {
-        const val CURRENT_VERSION = "1.5.4"
-        const val RELEASES_LINK = "https://github.com/NobilityDeviant/Wcofun.com_Downloader/releases"
     }
 }

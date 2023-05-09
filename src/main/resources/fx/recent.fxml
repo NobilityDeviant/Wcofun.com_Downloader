@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefHeight="754.0" prefWidth="705.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.scraper.RecentController">
+<VBox alignment="CENTER" prefHeight="600.0" prefWidth="700.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.scraper.RecentController">
    <children>
       <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Recent Episodes" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>
@@ -23,7 +23,7 @@
             <TableColumn fx:id="episodeNameColumn" prefWidth="519.0" text="Name" />
         </columns>
          <VBox.margin>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+            <Insets bottom="10.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </TableView>
       <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Recent Series" textAlignment="CENTER" textFill="WHITE" wrapText="true">
@@ -40,7 +40,7 @@
             <TableColumn fx:id="seriesNameColumn" prefWidth="519.0" text="Name" />
          </columns>
          <VBox.margin>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+            <Insets bottom="10.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </TableView>
    </children>

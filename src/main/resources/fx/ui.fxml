@@ -19,7 +19,7 @@
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="731.0" prefWidth="1049.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.MainController">
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.MainController">
    <top>
       <MenuBar stylesheets="@../css/menu.css" BorderPane.alignment="CENTER">
          <menus>
@@ -77,7 +77,7 @@
                                           <Insets left="2.0" right="2.0" />
                                        </HBox.margin>
                                     </Button>
-                                    <Button alignment="CENTER" contentDisplay="CENTER" layoutX="537.0" layoutY="10.0" minHeight="40.0" mnemonicParsing="false" onAction="#pasteURLAndStart" prefHeight="40.0" stylesheets="@../css/button.css" text="Paste URL &amp; Start" textAlignment="CENTER">
+                                    <Button alignment="CENTER" contentDisplay="CENTER" layoutX="537.0" layoutY="10.0" minHeight="40.0" mnemonicParsing="false" onAction="#pasteURLAndStart" prefHeight="40.0" prefWidth="120.0" stylesheets="@../css/button.css" text="Paste URL &amp; Start" textAlignment="CENTER">
                                        <HBox.margin>
                                           <Insets left="2.0" />
                                        </HBox.margin>

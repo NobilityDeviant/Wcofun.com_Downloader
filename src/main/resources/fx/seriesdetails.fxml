@@ -13,9 +13,9 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefHeight="858.0" prefWidth="510.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.series.SeriesDetailsController">
+<VBox alignment="CENTER" prefHeight="600.0" prefWidth="510.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.series.SeriesDetailsController">
    <children>
-      <ImageView fx:id="image" cache="true" fitHeight="199.0" fitWidth="500.0" nodeOrientation="INHERIT" pickOnBounds="true">
+      <ImageView fx:id="image" cache="true" fitHeight="150.0" fitWidth="500.0" nodeOrientation="INHERIT" pickOnBounds="true">
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
@@ -23,7 +23,7 @@
       </ImageView>
       <Label fx:id="title" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" text="Title" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>
-            <Font name="Arial Black" size="18.0" />
+            <Font name="Arial Black" size="16.0" />
          </font>
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="6.0" />
@@ -31,26 +31,26 @@
       </Label>
       <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" prefWidth="113.0" text="Description" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>
-            <Font name="Arial Black" size="14.0" />
+            <Font name="Arial Black" size="12.0" />
          </font>
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </Label>
-      <TextArea fx:id="desc" editable="false" prefHeight="187.0" prefWidth="500.0" stylesheets="@../css/textarea.css" wrapText="true" VBox.vgrow="ALWAYS">
+      <TextArea fx:id="desc" editable="false" prefHeight="220.0" prefWidth="500.0" stylesheets="@../css/textarea.css" wrapText="true" VBox.vgrow="ALWAYS">
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </TextArea>
       <Label fx:id="episodesLabel" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" layoutX="243.0" layoutY="225.0" text="Episodes" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>
-            <Font name="Arial Black" size="14.0" />
+            <Font name="Arial Black" size="12.0" />
          </font>
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </Label>
-      <TableView fx:id="episodesTable" prefHeight="231.0" stylesheets="@../css/tableview.css">
+      <TableView fx:id="episodesTable" prefHeight="280.0" prefWidth="500.0" stylesheets="@../css/tableview.css">
         <columns>
           <TableColumn fx:id="nameColumn" prefWidth="499.0" text="Name" />
         </columns>
@@ -60,7 +60,7 @@
       </TableView>
       <Label fx:id="genresTitle" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" prefHeight="48.0" text="Genres" textAlignment="CENTER" textFill="WHITE" wrapText="true">
          <font>
-            <Font name="Arial Black" size="14.0" />
+            <Font name="Arial Black" size="12.0" />
          </font>
          <VBox.margin>
             <Insets top="5.0" />

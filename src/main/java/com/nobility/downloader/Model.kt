@@ -43,8 +43,8 @@ import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import java.util.logging.Level
 import java.util.logging.Logger
-import kotlin.collections.ArrayList
 import kotlin.system.exitProcess
+
 
 class Model {
 
@@ -764,7 +764,15 @@ class Model {
     }
 
     fun showError(title: String?, content: String?) {
-        val alert = Alert(Alert.AlertType.ERROR)
+        val mContent = content?: "Message Unavailable"
+        val copy = ButtonType("Copy Error", ButtonBar.ButtonData.OK_DONE)
+        val close = ButtonType("Close", ButtonBar.ButtonData.CANCEL_CLOSE)
+        val alert = Alert(
+            Alert.AlertType.ERROR,
+            mContent,
+            copy,
+            close
+        )
         alert.title = title
         alert.dialogPane.stylesheets.add(Main::class.java.getResource(DIALOG_PATH)?.toString() ?: "")
         alert.dialogPane.styleClass.add("dialog")
@@ -776,8 +784,19 @@ class Model {
             }
         }
         alert.headerText = ""
-        alert.contentText = content
-        alert.showAndWait()
+        val result = alert.showAndWait()
+        if (result.get() == close) {
+            alert.close()
+        } else if (result.get() == copy) {
+            showCopyPrompt(
+                "Would you like to copy this error?" +
+                        "\nNote: Please paste the error before closing the app. " +
+                        "It will be removed from your clipboard when closed.",
+                prettyError(mContent),
+                true,
+                mainStage
+            )
+        }
     }
 
     fun showError(content: String?) {
@@ -785,7 +804,18 @@ class Model {
     }
 
     fun showError(content: String, e: Exception) {
-        val alert = Alert(Alert.AlertType.ERROR)
+        val mContent = """
+               $content
+               Error: ${e.localizedMessage}
+               """.trimIndent()
+        val copy = ButtonType("Copy Error", ButtonBar.ButtonData.OK_DONE)
+        val close = ButtonType("Close", ButtonBar.ButtonData.CANCEL_CLOSE)
+        val alert = Alert(
+            Alert.AlertType.ERROR,
+            mContent,
+            copy,
+            close
+        )
         alert.title = "Error"
         alert.dialogPane.stylesheets.add(Main::class.java.getResource(DIALOG_PATH)?.toString() ?: "")
         alert.dialogPane.styleClass.add("dialog")
@@ -797,11 +827,34 @@ class Model {
             }
         }
         alert.headerText = ""
-        alert.contentText = """
-               $content
-               Error: ${e.localizedMessage}
-               """.trimIndent()
-        alert.showAndWait()
+        val result = alert.showAndWait()
+        if (result.get() == close) {
+            alert.close()
+        } else if (result.get() == copy) {
+            showCopyPrompt(
+                "Would you like to copy this error?" +
+                        "\nNote: Please paste the error before closing the app. " +
+                        "It will be removed from your clipboard when closed.",
+                prettyError(mContent),
+                true,
+                mainStage
+            )
+        }
+    }
+
+    private fun prettyError(error: String): String {
+        val builder = StringBuilder()
+        val split = error.split(" ")
+        var end = 0
+        for (s in split) {
+            builder.append(s).append(" ")
+            end++
+            if (end >= 15) {
+                builder.append("\n")
+                end = 0
+            }
+        }
+        return builder.toString()
     }
 
     private fun openLink(link: String) {
@@ -851,19 +904,34 @@ class Model {
     }
 
     fun showCopyPrompt(text: String, prompt: Boolean, stage: Stage) {
-        val clipboard = Clipboard.getSystemClipboard()
-        val content = ClipboardContent()
         if (prompt) {
             showConfirm("Do you want to copy this to your clipboard?") {
-                content.putString(text)
-                clipboard.setContent(content)
+                copyToClipboard(text)
                 toast("Copied", stage)
             }
         } else {
-            content.putString(text)
-            clipboard.setContent(content)
+            copyToClipboard(text)
             toast("Copied", stage)
         }
+    }
+
+    fun showCopyPrompt(message: String, text: String, prompt: Boolean, stage: Stage) {
+        if (prompt) {
+            showConfirm(message) {
+                copyToClipboard(text)
+                toast("Copied", stage)
+            }
+        } else {
+            copyToClipboard(text)
+            toast("Copied", stage)
+        }
+    }
+
+    fun copyToClipboard(text: String) {
+        val clipboard = Clipboard.getSystemClipboard()
+        val content = ClipboardContent()
+        content.putString(text)
+        clipboard.setContent(content)
     }
 
     fun showLinkPrompt(link: String, prompt: Boolean) {
@@ -1026,8 +1094,8 @@ class Model {
     }
 
     companion object {
-        const val OLD_WEBSITE = "https://www.wcofun.com"
-        const val WEBSITE = "https://www.wcofun.net"
+        const val OLD_WEBSITE = "https://www.wcofun.net"
+        const val WEBSITE = "https://www.wcofun.com"
         const val GITHUB = "https://github.com/NobilityDeviant/Wcofun.com_Downloader"
         const val EXAMPLE_SERIES = "$WEBSITE/anime/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level"
         const val EXAMPLE_SHOW =
