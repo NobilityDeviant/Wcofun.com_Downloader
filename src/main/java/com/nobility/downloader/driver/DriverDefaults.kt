@@ -1,4 +1,4 @@
-package com.nobility.downloader.settings
+package com.nobility.downloader.driver
 
 /**
  * This is used to make switching the default driver easy.

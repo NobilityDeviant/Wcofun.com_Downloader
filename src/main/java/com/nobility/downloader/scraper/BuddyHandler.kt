@@ -5,6 +5,7 @@ import com.nobility.downloader.entities.Episode
 import com.nobility.downloader.entities.Series
 import com.nobility.downloader.settings.Defaults
 import com.nobility.downloader.utils.Resource
+import com.nobility.downloader.utils.Tools
 import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
 import java.io.File
@@ -15,32 +16,28 @@ import java.io.File
  */
 class BuddyHandler(private val model: Model) {
 
-    var url: String? = null
     private var series: Series? = null
     private var episode: Episode? = null
-    val taskScope = CoroutineScope(Dispatchers.Default)
+    private val taskScope = CoroutineScope(Dispatchers.Default)
 
     suspend fun update(url: String) {
-        this.url = url
-        //println("Launching BuddyHandler to handle the link(s).")
+        val slug = Tools.extractSlugFromLink(url)
         //all series links contains this key
         if (url.contains("/anime/")) {
-            val cachedSeries = model.settings().wcoHandler.seriesForLink(url)
+            val cachedSeries = model.settings().wcoHandler.seriesForSlug(slug)
             if (cachedSeries != null) {
                 series = cachedSeries
-                //println("Found cache series. Using that data instead.")
                 return
             } else {
-                val downloadSeries = model.settings().seriesForLink(url)
+                val downloadSeries = model.settings().seriesForSlug(slug)
                 if (downloadSeries != null) {
                     series = downloadSeries
-                    //println("Found recently downloaded series. Using that data instead.")
                     return
                 }
             }
         }
-        val scraper = LinkHandler(model)
-        val result = scraper.handleLink(url)
+        val scraper = SlugHandler(model)
+        val result = scraper.handleSlug(slug)
         scraper.killDriver()
         if (result.data != null) {
             when (result.data) {
@@ -124,8 +121,8 @@ class BuddyHandler(private val model: Model) {
         series: Series
     ): Resource<NewEpisodes> = withContext(Dispatchers.IO) {
         println("Looking for new episodes for ${series.name}")
-        val scraper = LinkHandler(model)
-        val result = scraper.getSeriesEpisodes(series.link)
+        val scraper = SlugHandler(model)
+        val result = scraper.getSeriesEpisodesWithSlug(series.slug)
         scraper.killDriver()
         if (result.data != null) {
             if (result.data.size > series.episodes.size) {
@@ -141,11 +138,15 @@ class BuddyHandler(private val model: Model) {
         series: Series
     ): Resource<Series> = withContext(Dispatchers.IO) {
         println("Updating series details for ${series.name}")
-        val scraper = LinkHandler(model)
-        val result = scraper.handleLink(series.link, true)
+        val scraper = SlugHandler(model)
+        val result = scraper.handleSlug(series.slug, true)
         scraper.killDriver()
         if (result.data is Series) {
+            if (series.matches(result.data)) {
+                return@withContext Resource.Error("Series is already updated.")
+            }
             series.update(result.data)
+            model.settings().addOrUpdateSeries(series)
             model.settings().wcoHandler.addOrUpdateSeries(series)
             return@withContext Resource.Success(result.data)
         } else {
@@ -157,9 +158,9 @@ class BuddyHandler(private val model: Model) {
         series: Series,
         latestEpisodes: List<Episode>
     ): List<Episode> {
-        val episodes = ArrayList<Episode>()
+        val episodes = mutableListOf<Episode>()
         for (e in latestEpisodes) {
-            if (!series.hasEpisode(e)) {
+            if (!model.hasEpisode(series, e)) {
                 episodes.add(e)
             }
         }
@@ -168,6 +169,10 @@ class BuddyHandler(private val model: Model) {
 
     fun kill() {
         model.stop()
+        taskScope.cancel()
+    }
+
+    fun cancel() {
         taskScope.cancel()
     }
 }

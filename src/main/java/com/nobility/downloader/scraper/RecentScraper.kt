@@ -1,7 +1,7 @@
 package com.nobility.downloader.scraper
 
-import com.nobility.downloader.DriverBase
 import com.nobility.downloader.Model
+import com.nobility.downloader.driver.DriverBase
 import com.nobility.downloader.settings.Defaults
 import com.nobility.downloader.utils.Resource
 import com.nobility.downloader.utils.Tools
@@ -16,7 +16,7 @@ class RecentScraper(model: Model): DriverBase(model) {
     suspend fun run(): Resource<RecentResult> = withContext(Dispatchers.IO) {
         val data = ArrayList<RecentResult.Data>()
         try {
-            driver.get(Model.WEBSITE)
+            driver.get(model.wcoUrl)
             val doc = Jsoup.parse(driver.pageSource)
             val recentEpisodeHolder = doc.getElementById("sidebar_right")
             if (recentEpisodeHolder != null) {

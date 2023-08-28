@@ -9,12 +9,17 @@ import io.objectbox.relation.ToMany;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
+import java.util.List;
+
 @Entity
 public class Series {
 
     @Id
     public long id;
+    @Deprecated
     public String link;
+    public String slug;
+    @Deprecated
     public String movieLink;
     public String name;
     public String dateAdded;
@@ -30,14 +35,14 @@ public class Series {
     public Series() {}
 
     public Series(
-            String link,
+            String slug,
             String name,
             String imageLink,
             String description,
             String dateAdded,
             int identity
     ) {
-        this.link = link;
+        this.slug = slug;
         this.name = name;
         this.imageLink = imageLink;
         this.description = description;
@@ -45,13 +50,8 @@ public class Series {
         this.identity = identity;
     }
 
-    public boolean matches(Series series) {
-        return series.toReadable().equals(toReadable());
-    }
-
     public void update(Series series) {
-        this.link = series.link;
-        this.movieLink = series.movieLink;
+        this.slug = series.slug;
         this.name = series.name;
         this.dateAdded = series.dateAdded;
         this.imageLink = series.imageLink;
@@ -63,10 +63,43 @@ public class Series {
         this.genres.addAll(series.genres);
     }
 
+    public void updateEpisodes(List<Episode> episodes) {
+        if (this.episodes.size() != episodes.size()) {
+            this.episodes.clear();
+            this.episodes.addAll(episodes);
+        }
+    }
+
+    public void updateEpisodes(List<Episode> episodes, boolean updateDb) {
+        if (this.episodes.size() != episodes.size()) {
+            this.episodes.clear();
+            this.episodes.addAll(episodes);
+            if (updateDb) {
+                this.episodes.applyChangesToDb();
+            }
+        }
+    }
+
+    public void updateGenres(List<Genre> genres) {
+        if (this.genres.size() != genres.size()) {
+            this.genres.clear();
+            this.genres.addAll(genres);
+        }
+    }
+
+    public void updateSlug() {
+        if (!StringChecker.isNullOrEmpty(link) && StringChecker.isNullOrEmpty(slug)) {
+            this.slug = Tools.extractSlugFromLink(link);
+        }
+    }
+
+    public boolean matches(Series series) {
+        return series.toReadable().equals(toReadable());
+    }
+
     public String toReadable() {
         String d = ";";
-        return link + d
-                + name + d
+        return slug + d + name + d
                 + episodes.size() + d
                 + imageLink + d
                 + description + d
@@ -74,37 +107,9 @@ public class Series {
                 + identity;
     }
 
-    public String toPrintable() {
-        String d = ";";
-        return link + d + name + d + episodes.size() + d + id;
-    }
-
     public boolean hasImageAndDescription() {
         return !StringChecker.isNullOrEmpty(imageLink)
                 && !StringChecker.isNullOrEmpty(description);
-    }
-
-    public boolean hasEpisode(Episode episode) {
-        if (episode == null) {
-            return false;
-        }
-        for (Episode e : episodes) {
-            if (Tools.fixOldLink(e.link)
-                    .equals(Tools.fixOldLink(episode.link))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Episode episodeForLink(String link) {
-        for (Episode e : episodes) {
-            if (Tools.fixOldLink(e.link)
-                    .equals(Tools.fixOldLink(link))) {
-                return e;
-            }
-        }
-        return null;
     }
 
     public void updateEpisodeCountValue() {

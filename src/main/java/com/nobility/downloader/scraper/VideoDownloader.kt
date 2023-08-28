@@ -1,14 +1,18 @@
 package com.nobility.downloader.scraper
 
-import com.nobility.downloader.DriverBase
 import com.nobility.downloader.Model
-import com.nobility.downloader.downloads.DownloadUpdater
+import com.nobility.downloader.driver.DriverBase
 import com.nobility.downloader.entities.Download
 import com.nobility.downloader.entities.Episode
 import com.nobility.downloader.settings.Defaults
+import com.nobility.downloader.settings.Quality
+import com.nobility.downloader.utils.DownloadUpdater
+import com.nobility.downloader.utils.JavascriptHelper
+import com.nobility.downloader.utils.Resource
 import com.nobility.downloader.utils.Tools.fixTitle
 import kotlinx.coroutines.*
 import org.openqa.selenium.By
+import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
 import java.io.*
@@ -16,6 +20,10 @@ import java.net.URL
 import java.time.Duration
 import javax.net.ssl.HttpsURLConnection
 
+
+/**
+ * This is the class that handles the scraping of the video link.
+ */
 class VideoDownloader(model: Model) : DriverBase(model) {
 
     private var currentEpisode: Episode? = null
@@ -23,35 +31,79 @@ class VideoDownloader(model: Model) : DriverBase(model) {
     private val download: Download get() = currentDownload!!
     private val episode: Episode get() = currentEpisode!!
     private var retries = 0
+    private var resRetries = 0
+
+    //private var failedToExtractResolutionLink = false
+    //private var failedToVisitFrame = false
     val taskScope = CoroutineScope(Dispatchers.Default)
 
     suspend fun run() = withContext(Dispatchers.IO) {
         while (model.isRunning) {
             if (retries >= 15) {
                 if (currentEpisode != null) {
-                    println("Reached max retries (15) for ${episode.link}. Skipping episode...")
+                    println("Reached max retries (15) for ${episode.name}. Skipping episode...")
                 }
                 currentEpisode = null
+                resRetries = 0
                 retries = 0
                 continue
             }
             if (currentEpisode == null) {
-                currentEpisode = model.nextLink
+                currentEpisode = model.nextEpisode
                 if (currentEpisode == null) {
                     break
                 }
+                resRetries = 0
                 retries = 0
             }
-            val link = episode.link
-            if (link.isNullOrEmpty()) {
-                println("Skipping episode (${episode.name}) with no link.")
+            val slug = episode.slug
+            if (slug.isNullOrEmpty()) {
+                println("Skipping episode (${episode.name}) with no slug.")
                 currentEpisode = null
                 continue
             }
             model.incrementDownloadsInProgress()
-            var series = model.settings().seriesForLink(episode.seriesLink)
+            var downloadLink = ""
+            var qualityOption = Quality.qualityForTag(
+                model.settings().stringSetting(Defaults.QUALITY)
+            )
+            if (resRetries < 3) {
+                val result = detectAvailableResolutions(slug)
+                if (result.errorCode != -1) {
+                    val errorCode = ErrorCode.errorCodeForCode(result.errorCode)
+                    if (errorCode == ErrorCode.NO_FRAME) {
+                        resRetries++
+                        model.decrementDownloadsInProgress()
+                        model.debugErr("Failed to find frame for resolution check. Retrying...")
+                        continue
+                    } else if (errorCode == ErrorCode.IFRAME_FORBIDDEN) {
+                        resRetries++
+                        model.decrementDownloadsInProgress()
+                        model.debugErr("Failed to visit iframe for resolution check. Retrying...")
+                        continue
+                    } else if (errorCode == ErrorCode.FAILED_EXTRACT_RES) {
+                        resRetries = 3
+                        model.debugErr("Failed to extract resolution. Using original method.")
+                    }
+                }
+                if (result.data != null) {
+                    qualityOption = Quality.bestQuality(
+                        qualityOption,
+                        result.data.map { it.quality }
+                    )
+                    result.data.forEach {
+                        if (it.quality == qualityOption) {
+                            downloadLink = it.downloadLink
+                        }
+                    }
+                } else {
+                    model.debugNote("Failed to find resolution download links, defaulting to LOW.")
+                    qualityOption = Quality.LOW
+                }
+            }
+            var series = model.settings().seriesForSlug(episode.seriesSlug)
             if (series == null) {
-                series = model.settings().wcoHandler.seriesForLink(episode.seriesLink)
+                series = model.settings().wcoHandler.seriesForSlug(episode.seriesSlug)
                 if (series == null) {
                     println("Failed to find series for episode: ${episode.name}. Unable to create save folder.")
                 }
@@ -70,15 +122,18 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                     saveFolder = File(downloadFolderPath + File.separator)
                 }
             }
+            val extraQualityName = if (qualityOption != Quality.LOW) " (${qualityOption.tag})" else ""
+            val episodeName = fixTitle(episode.name, true) + extraQualityName
             val saveFile = File(
                 saveFolder.absolutePath + File.separator
-                        + fixTitle(episode.name, true) + ".mp4"
+                        + "$episodeName.mp4"
             )
-            currentDownload = model.settings().downloadForLink(link)
+            currentDownload = model.settings().downloadForSlugAndQuality(slug, qualityOption)
             if (currentDownload != null) {
                 if (download.downloadPath.isNullOrEmpty()
                     || !File(download.downloadPath).exists()
-                    || download.downloadPath != saveFile.absolutePath) {
+                    || download.downloadPath != saveFile.absolutePath
+                ) {
                     download.downloadPath = saveFile.absolutePath
                 }
                 model.addDownload(download)
@@ -96,88 +151,119 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                     model.updateDownloadProgress(download)
                 }
             }
-            driver.get(link)
-            val wait = WebDriverWait(driver, Duration.ofSeconds(30))
-            val animeJs = "anime-js-0"
-            val cizgiJs = "cizgi-js-0"
-            val videoJs = "video-js_html5_api"
-            var foundVideoFrame = false
-            var flag = 0
-            while (flag < 2) {
-                try {
-                    wait.pollingEvery(Duration.ofSeconds(1))
-                        .withTimeout(Duration.ofSeconds(10))
-                        .until(
-                            ExpectedConditions.visibilityOfElementLocated(
-                                By.id(
-                                    when (flag) {
-                                        0 -> animeJs
-                                        1 -> cizgiJs
-                                        else -> ""
-                                    }
+            if (downloadLink.isEmpty()) {
+                driver.get(model.linkForSlug(slug))
+                val wait = WebDriverWait(driver, Duration.ofSeconds(30))
+                val animeJs = "anime-js-0"
+                val cizgiJs = "cizgi-js-0"
+                val videoJs = "video-js_html5_api"
+                var foundVideoFrame = false
+                //val checkForQuality = qualityOption != Quality.LOW
+                //var skip = false
+                var flag = 0
+                while (flag < 2) {
+                    try {
+                        wait.pollingEvery(Duration.ofSeconds(1))
+                            .withTimeout(Duration.ofSeconds(10))
+                            .until(
+                                ExpectedConditions.visibilityOfElementLocated(
+                                    By.id(
+                                        when (flag) {
+                                            0 -> animeJs
+                                            1 -> cizgiJs
+                                            else -> ""
+                                        }
+                                    )
                                 )
                             )
+                        val frame = driver.findElement(
+                            By.id(
+                                when (flag) {
+                                    0 -> animeJs
+                                    1 -> cizgiJs
+                                    else -> ""
+                                }
+                            )
                         )
-                    val frame = driver.findElement(By.id(
-                        when (flag) {
-                            0 -> animeJs
-                            1 -> cizgiJs
-                            else -> ""
-                        }
-                    ))
-                    //frame.click()
-                    driver.switchTo().frame(frame)
-                    foundVideoFrame = true
-                    break
+                        driver.switchTo().frame(frame)
+                        foundVideoFrame = true
+                        /*if (!failedToVisitFrame) {
+                            val frameLink = frame.getAttribute("src")
+                            if (!frameLink.isNullOrEmpty()) {
+                                //must redirect like this or else we get forbidden
+                                js.executeScript(JavascriptHelper.changeUrl(frameLink))
+                                if (driver.pageSource.contains("403 Forbidden")) {
+                                    println(
+                                        "Failed to video frame for: $slug" +
+                                                "\nPlease report this in github issues." +
+                                                "\nRetrying with original method..."
+                                    )
+                                    skip = true
+                                    failedToVisitFrame = true
+                                    break
+                                } else {
+                                    foundVideoFrame = true
+                                }
+                            }
+                        } else {
+                           driver.switchTo().frame(frame)
+                            foundVideoFrame = true
+                        }*/
+                        break
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        model.debugErr("Failed to find flag $flag. Trying next one.", e)
+                        flag++
+                    }
+                }
+                //if (skip) {
+                //  model.decrementDownloadsInProgress()
+                //continue
+                //}
+                if (!foundVideoFrame) {
+                    model.debugErr("No flag was found. IFrame not found in webpage.")
+                    model.debugWriteErrorToFile("Flag Not Found:\n" + driver.pageSource, "source")
+                    println("Failed to find video frame for ${model.linkForSlug(slug)}. Retrying...")
+                    retries++
+                    model.decrementDownloadsInProgress()
+                    continue
+                }
+                var videoLinkError: String
+                try {
+                    val videoPlayer = driver.findElement(By.id(videoJs))
+                    //this makes it wait so it doesn't throw an error everytime
+                    wait.pollingEvery(Duration.ofSeconds(1))
+                        .withTimeout(Duration.ofSeconds(15))
+                        .until(ExpectedConditions.attributeToBeNotEmpty(videoPlayer, "src"))
+                    downloadLink = videoPlayer.getAttribute("src")
+                    videoLinkError = videoPlayer.getAttribute("innerHTML")
                 } catch (e: Exception) {
-                    model.debugErr("Failed to find flag $flag. Trying next one.", e)
-                    flag++
+                    model.debugErr("Found frame, but failed to find $videoJs", e)
+                    println("Failed to find video player inside frame for ${model.linkForSlug(slug)} Retrying...")
+                    retries++
+                    model.decrementDownloadsInProgress()
+                    continue
                 }
-            }
-            if (!foundVideoFrame) {
-                model.debugErr("No flag was found. IFrame not found in webpage.")
-                model.debugWriteErrorToFile("Flag Not Found:\n" + driver.pageSource, "source")
-                println("Failed to find video frame for $link. Retrying...")
-                retries++
-                model.decrementDownloadsInProgress()
-                continue
-            }
-            var videoLink: String
-            var videoLinkError: String
-            try {
-                val videoPlayer = driver.findElement(By.id(videoJs))
-                //this makes it wait so it doesn't throw an error everytime
-                wait.pollingEvery(Duration.ofSeconds(1))
-                    .withTimeout(Duration.ofSeconds(15))
-                    .until(ExpectedConditions.attributeToBeNotEmpty(videoPlayer, "src"))
-                videoLink = videoPlayer.getAttribute("src")
-                videoLinkError = videoPlayer.getAttribute("innerHTML")
-            } catch (e: Exception) {
-                model.debugErr("Found frame, but failed to find $videoJs", e)
-                println("Failed to find video player inside frame for $link. Retrying...")
-                retries++
-                model.decrementDownloadsInProgress()
-                continue
-            }
-            if (videoLink.isEmpty()) {
-                model.debugErr("Found $videoJs, but the video link was empty? No javascript found?")
-                if (videoLinkError.isNotEmpty()) {
-                    model.debugErr("Empty link source: \n${videoLinkError.trim()}")
+                if (downloadLink.isEmpty()) {
+                    model.debugErr("Found $videoJs, but the video link was empty? No javascript found?")
+                    if (videoLinkError.isNotEmpty()) {
+                        model.debugErr("Empty link source: \n${videoLinkError.trim()}")
+                    }
+                    println("Failed to find video link for ${model.linkForSlug(slug)}. Retrying...")
+                    retries++
+                    model.decrementDownloadsInProgress()
+                    continue
                 }
-                println("Failed to find video link for $link. Retrying...")
-                retries++
-                model.decrementDownloadsInProgress()
-                continue
             }
             model.debugNote("Successfully found video link with $retries retries.")
-            //println(videoLink)
             try {
                 if (currentDownload == null) {
                     currentDownload = Download(
                         saveFile.absolutePath,
                         episode.name,
-                        episode.link,
-                        episode.seriesLink,
+                        episode.slug,
+                        episode.seriesSlug,
+                        qualityOption.resolution,
                         0L,
                         System.currentTimeMillis(),
                     )
@@ -187,7 +273,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 } else {
                     model.debugNote("Using existing download for ${episode.name}")
                 }
-                val originalFileSize = fileSize(URL(videoLink))
+                val originalFileSize = fileSize(URL(downloadLink))
                 if (originalFileSize <= 5000) {
                     println("Retrying... Failed to determine file size for: " + currentEpisode!!.name)
                     retries++
@@ -220,19 +306,19 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                         continue
                     }
                 }
-                println("Downloading: " + download.name)
+                println("[${qualityOption.tag}] Downloading: " + download.name)
                 download.queued = false
                 download.downloading = true
                 download.fileSize = originalFileSize
                 model.addDownload(download)
                 model.updateDownloadInDatabase(download, true)
-                downloadVideo(URL(videoLink), saveFile)
+                downloadVideo(URL(downloadLink), saveFile)
                 download.downloading = false
                 //second time to ensure ui update
                 model.updateDownloadInDatabase(download, true)
                 if (saveFile.exists() && saveFile.length() >= originalFileSize) {
                     model.incrementDownloadsFinished()
-                    println("Successfully downloaded: " + download.name)
+                    println("Successfully downloaded: $episodeName")
                     currentEpisode = null
                 }
             } catch (e: IOException) {
@@ -240,16 +326,154 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 download.downloading = false
                 model.updateDownloadInDatabase(download, true)
                 println(
-                    "Unable to download ${download.name}" +
+                    "Unable to download $episodeName" +
                             "\nError: ${e.localizedMessage}" +
                             "\nReattempting..."
                 )
-                model.debugErr("Failed to download ${download.name}", e)
+                model.debugErr("Failed to download $episodeName", e)
                 model.decrementDownloadsInProgress()
             }
         }
         killDriver()
         taskScope.cancel()
+    }
+
+    private data class QualityAndDownload(val quality: Quality, val downloadLink: String)
+
+    private enum class ErrorCode(val code: Int) {
+        NO_FRAME(0),
+        IFRAME_FORBIDDEN(1),
+        FAILED_EXTRACT_RES(2);
+
+        companion object {
+            fun errorCodeForCode(code: Int?): ErrorCode? {
+                if (code == null) {
+                    return null
+                }
+                values().forEach {
+                    if (code == it.code) {
+                        return it
+                    }
+                }
+                return null
+            }
+        }
+    }
+
+    private suspend fun detectAvailableResolutions(
+        slug: String
+    ): Resource<List<QualityAndDownload>> {
+        if (driver !is JavascriptExecutor) {
+            return Resource.Error("This driver doesn't support JavascriptExecutor.")
+        }
+        val fullLink = model.linkForSlug(slug)
+        println("Scraping resolution links from $fullLink")
+        val qualities = mutableListOf<QualityAndDownload>()
+        val js = driver as JavascriptExecutor
+        driver.get(fullLink)
+        val wait = WebDriverWait(driver, Duration.ofSeconds(30))
+        val animeJs = "anime-js-0"
+        val cizgiJs = "cizgi-js-0"
+        var foundVideoFrame = false
+        var flag = 0
+        while (flag < 2) {
+            try {
+                wait.pollingEvery(Duration.ofSeconds(1))
+                    .withTimeout(Duration.ofSeconds(10))
+                    .until(
+                        ExpectedConditions.visibilityOfElementLocated(
+                            By.id(
+                                when (flag) {
+                                    0 -> animeJs
+                                    1 -> cizgiJs
+                                    else -> ""
+                                }
+                            )
+                        )
+                    )
+                val frame = driver.findElement(
+                    By.id(
+                        when (flag) {
+                            0 -> animeJs
+                            1 -> cizgiJs
+                            else -> ""
+                        }
+                    )
+                )
+                val frameLink = frame.getAttribute("src")
+                if (!frameLink.isNullOrEmpty()) {
+                    //must redirect like this or else we get forbidden
+                    js.executeScript(JavascriptHelper.changeUrl(frameLink))
+                    if (driver.pageSource.contains("403 Forbidden")) {
+                        println(
+                            "Failed to find video frame for: $slug" +
+                                    "\nPlease report this in github issues." +
+                                    "\nRetrying with original method..."
+                        )
+                        return Resource.ErrorCode(ErrorCode.IFRAME_FORBIDDEN.code)
+                    } else {
+                        foundVideoFrame = true
+                    }
+                }
+                break
+            } catch (e: Exception) {
+                e.printStackTrace()
+                model.debugErr("Failed to find flag $flag for $slug. Trying next one.", e)
+                flag++
+            }
+        }
+        if (!foundVideoFrame) {
+            return Resource.ErrorCode(ErrorCode.NO_FRAME.code)
+        }
+        //vp.ready(function() { indicates that the video has multiple resolutions (iframe only)
+        //val hasOptions = driver.pageSource.contains("vp.ready(function() {")
+        //this is better though
+        val has720 = driver.pageSource.contains("obj720")
+        val has1080 = driver.pageSource.contains("obj1080")
+        for (quality in Quality.qualityList(has720, has1080)) {
+            try {
+                val src = driver.pageSource
+                val linkKey1 = "  });    \n" +
+                        "      });\n" +
+                        "      \n" +
+                        "      \$.getJSON(\""
+                val linkKey2 = "\", function(response){"
+                val linkIndex1 = src.indexOf(linkKey1)
+                val linkIndex2 = src.indexOf(linkKey2)
+                val functionLink = driver.pageSource.substring(
+                    linkIndex1 + linkKey1.length, linkIndex2
+                )
+                js.executeScript(
+                    JavascriptHelper.changeUrlToVideoFunction(
+                        functionLink,
+                        quality
+                    )
+                )
+                delay(5000)
+                if (driver.pageSource.contains("404 Not Found")) {
+                    model.debugErr("Failed to find $quality quality link for $slug")
+                    continue
+                }
+                val videoLink = driver.currentUrl
+                if (videoLink.isNotEmpty()) {
+                    qualities.add(
+                        QualityAndDownload(quality, videoLink)
+                    )
+                    model.debugNote(
+                        "Found $quality link for $slug"
+                    )
+                }
+                driver.navigate().back()
+                delay(2000)
+            } catch (e: Exception) {
+                continue
+            }
+        }
+        return if (qualities.isEmpty()) {
+            Resource.ErrorCode(ErrorCode.FAILED_EXTRACT_RES.code)
+        } else {
+            Resource.Success(qualities)
+        }
     }
 
     private fun fileSize(url: URL): Long {

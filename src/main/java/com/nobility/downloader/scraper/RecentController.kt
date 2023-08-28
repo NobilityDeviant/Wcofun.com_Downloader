@@ -15,7 +15,9 @@ import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.MouseEvent
 import javafx.stage.Stage
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import java.io.File
 import java.net.URL
 import java.util.*
@@ -66,7 +68,7 @@ class RecentController(
                         seriesDetails.onAction =
                             EventHandler {
                                 model.openSeriesDetails(
-                                    row.item.link
+                                    Tools.extractSlugFromLink(row.item.link)
                                 )
                             }
                         val openLink =
@@ -93,7 +95,7 @@ class RecentController(
                         downloadSeries.onAction =
                             EventHandler {
                                 if (model.isRunning) {
-                                    model.toast("You can't download new series while the downloader is running.", stage)
+                                    model.toast("You can't download recent series while the downloader is running.", stage)
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link
@@ -150,9 +152,10 @@ class RecentController(
                             MenuItem("Download Episode")
                         downloadEpisode.onAction =
                             EventHandler {
-                                //todo remove this
                                 if (model.isRunning) {
-                                    model.toast("You can't download new episodes while the downloader is running.", stage)
+                                    model.showError(
+                                        "You can't download recent episodes while the downloader is running.",
+                                    )
                                     return@EventHandler
                                 }
                                 model.urlTextField.text = row.item.link

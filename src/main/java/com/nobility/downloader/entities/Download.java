@@ -1,12 +1,12 @@
 package com.nobility.downloader.entities;
 
+import com.nobility.downloader.settings.Quality;
 import com.nobility.downloader.utils.StringChecker;
 import com.nobility.downloader.utils.Tools;
 import io.objectbox.annotation.Entity;
 import io.objectbox.annotation.Transient;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-
 import java.io.File;
 
 @Entity
@@ -15,7 +15,7 @@ public class Download extends Episode {
     public String downloadPath;
     public long dateAdded;
     public long fileSize;
-
+    public int resolution;
     @Transient
     public boolean downloading;
     @Transient
@@ -36,15 +36,17 @@ public class Download extends Episode {
     public Download(
             String downloadPath,
             String name,
-            String link,
-            String seriesLink,
+            String slug,
+            String seriesSlug,
+            int resolution,
             long fileSize,
             long dateAdded
     ) {
         this.downloadPath = downloadPath;
         this.name = name;
-        this.link = link;
-        this.seriesLink = seriesLink;
+        this.slug = slug;
+        this.seriesSlug = seriesSlug;
+        this.resolution = resolution;
         this.fileSize = fileSize;
         this.dateAdded = dateAdded;
         progress = new SimpleStringProperty("0%");
@@ -58,6 +60,7 @@ public class Download extends Episode {
         this.fileSize = download.fileSize;
         this.queued = download.queued;
         this.downloading = download.downloading;
+        this.resolution = download.resolution;
         if (updateProperties) {
             updateFileSizeProperty();
             updateProgress();
@@ -66,8 +69,8 @@ public class Download extends Episode {
     }
 
     public boolean matches(Download download) {
-        return (download.id > 0 && download.id == id) || Tools.fixOldLink(download.link)
-                .equals(Tools.fixOldLink(link));
+        return (download.id > 0 && download.id == id)
+                || (download.slug.equals(slug) && resolution == download.resolution);
     }
 
     public void updateFileSizeProperty() {
@@ -123,6 +126,12 @@ public class Download extends Episode {
             }
         }
         return false;
+    }
+
+    public String nameAndResolution() {
+        Quality quality = Quality.Companion.qualityForResolution(resolution);
+        String extra = quality == Quality.LOW ? "" : (" (" + quality.getTag() + ")");
+        return name + extra;
     }
 
 }

@@ -51,7 +51,7 @@ object Toast {
         toastStage.initOwner(ownerStage)
         toastStage.isResizable = false
         toastStage.initStyle(StageStyle.TRANSPARENT)
-        toastStage.isAlwaysOnTop = true
+        //toastStage.isAlwaysOnTop = true
         val text = Text(toastMsg)
         text.font = Font.font("Verdana", 20.0)
         text.fill = Color.GHOSTWHITE
@@ -63,8 +63,10 @@ object Toast {
         toastStage.scene = scene
         toastStage.show()
         val fadeInTimeline = Timeline()
-        val fadeInKey1 =
-            KeyFrame(Duration.millis(fadeInDelay.toDouble()), KeyValue(toastStage.scene.root.opacityProperty(), 1))
+        val fadeInKey1 = KeyFrame(
+            Duration.millis(fadeInDelay.toDouble()),
+            KeyValue(toastStage.scene.root.opacityProperty(), 1)
+        )
         fadeInTimeline.keyFrames.add(fadeInKey1)
         fadeInTimeline.onFinished = EventHandler {
             scope.launch {
@@ -75,7 +77,10 @@ object Toast {
                     KeyValue(toastStage.scene.root.opacityProperty(), 0)
                 )
                 fadeOutTimeline.keyFrames.add(fadeOutKey1)
-                fadeOutTimeline.onFinished = EventHandler { toastStage.close() }
+                fadeOutTimeline.onFinished = EventHandler {
+                    //toastStage.isAlwaysOnTop = false
+                    toastStage.close()
+                }
                 fadeOutTimeline.play()
             }
         }

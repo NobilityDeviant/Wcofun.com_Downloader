@@ -15,7 +15,7 @@
 
 <VBox alignment="CENTER" prefHeight="600.0" prefWidth="510.0" style="-fx-background-color: #454b75;" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.series.SeriesDetailsController">
    <children>
-      <ImageView fx:id="image" cache="true" fitHeight="150.0" fitWidth="500.0" nodeOrientation="INHERIT" pickOnBounds="true">
+      <ImageView fx:id="image" cache="true" fitHeight="175.0" fitWidth="500.0" nodeOrientation="INHERIT" pickOnBounds="true">
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
@@ -29,15 +29,7 @@
             <Insets bottom="5.0" left="5.0" right="5.0" top="6.0" />
          </VBox.margin>
       </Label>
-      <Label alignment="CENTER" contentDisplay="CENTER" graphicTextGap="3.0" prefWidth="113.0" text="Description" textAlignment="CENTER" textFill="WHITE" wrapText="true">
-         <font>
-            <Font name="Arial Black" size="12.0" />
-         </font>
-         <VBox.margin>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-         </VBox.margin>
-      </Label>
-      <TextArea fx:id="desc" editable="false" prefHeight="220.0" prefWidth="500.0" stylesheets="@../css/textarea.css" wrapText="true" VBox.vgrow="ALWAYS">
+      <TextArea fx:id="desc" editable="false" prefHeight="220.0" stylesheets="@../css/textarea.css" wrapText="true" VBox.vgrow="ALWAYS">
          <VBox.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
@@ -50,7 +42,7 @@
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </VBox.margin>
       </Label>
-      <TableView fx:id="episodesTable" prefHeight="280.0" prefWidth="500.0" stylesheets="@../css/tableview.css">
+      <TableView fx:id="episodesTable" prefHeight="280.0" stylesheets="@../css/tableview.css">
         <columns>
           <TableColumn fx:id="nameColumn" prefWidth="499.0" text="Name" />
         </columns>
@@ -88,6 +80,9 @@
                </HBox.margin>
             </Button>
          </children>
+         <VBox.margin>
+            <Insets top="5.0" />
+         </VBox.margin>
       </HBox>
       <Separator opacity="0.14" prefWidth="200.0" style="-fx-background-color: black;" />
    </children>

@@ -1,10 +1,13 @@
 package com.nobility.downloader.settings
 
+import com.nobility.downloader.driver.DriverDefaults
+
 /**
  * An enum used for easy settings management.
  * The type is no longer needed with the new system.
- * Settings only support numbers, string and booleans.
+ * Settings only support numbers, strings and booleans.
  * Custom saves must be implemented inside SettingsMeta
+ * @see com.nobility.downloader.entities.settings.SettingsMeta
  */
 enum class Defaults(
     val key: String,
@@ -23,5 +26,10 @@ enum class Defaults(
     LASTDOWNLOAD("last_dl", ""),
     TOASTTRANSPARENCY("toast_trans", 50.toDouble()),
     DRIVER("driver", DriverDefaults.CHROME.name),
-    DEBUGMESSAGES("debug_messages", false)
+    DEBUGMESSAGES("debug_messages", false),
+    DOMAIN("wco_website", "wcofun"), //used to combat the constantly changing domain
+    EXTENSION("wco_ext", "org"), //used to combat the constantly changing domain
+    QUALITY("video_quality", Quality.LOW.tag),
+    NEW_DB_WARNING("new_db_warn", false)
+
 }

@@ -3,7 +3,6 @@ package com.nobility.downloader
 import com.nobility.downloader.entities.Download
 import com.nobility.downloader.settings.Defaults
 import com.nobility.downloader.utils.Tools
-import com.nobility.downloader.utils.Tools.fixOldLink
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
 import javafx.event.ActionEvent
@@ -83,7 +82,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
     override fun initialize(location: URL, resources: ResourceBundle?) {
         model.setTextOutput(console)
         model.urlTextField = urlSubmission
-        urlSubmission.promptTextProperty().value = Model.EXAMPLE_SERIES
+        urlSubmission.promptTextProperty().value = model.exampleSeries
         urlSubmission.onKeyPressed = EventHandler { e: KeyEvent ->
             if (e.code == KeyCode.ENTER) {
                 start()
@@ -102,7 +101,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
         sizeColumn.maxWidth = (1f * Int.MAX_VALUE * 10).toDouble()
         progressColumn.maxWidth = (1f * Int.MAX_VALUE * 7).toDouble()
         nameColumn.setCellValueFactory {
-            SimpleStringProperty(it.value.name)
+            SimpleStringProperty(it.value.nameAndResolution())
         }
         sizeColumn.setCellValueFactory {
             it.value.fileSizeProperty
@@ -138,7 +137,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                                 EventHandler { model.openFolder(row.item.downloadPath, true) }
                             val deleteFile = MenuItem("Delete File")
                             deleteFile.onAction = EventHandler {
-                                model.showConfirm("Do you wish to delete this file?") {
+                                model.showConfirm("Do you wish to delete ${row.item.nameAndResolution()}?") {
                                     if (row.item.downloading || row.item.queued) {
                                         model.toast("You can't delete videos that are being downloaded.")
                                         return@showConfirm
@@ -147,7 +146,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                                     if (file != null && file.exists()) {
                                         if (file.delete()) {
                                             model.removeDownload(row.item)
-                                            model.showMessage("Success", "Successfully deleted this episode.")
+                                            model.toast("Successfully deleted file.")
                                         } else {
                                             model.showError("Unable to delete this file. No error thrown. Most likely folder permission issues.")
                                         }
@@ -177,7 +176,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                                         model.toast("This episode is already in queue.")
                                     }
                                 } else {
-                                    urlSubmission.text = fixOldLink(row.item.link)
+                                    urlSubmission.text = model.linkForSlug(row.item.slug)
                                     start()
                                     model.toast("Launched video downloader for: ${row.item.name}")
                                 }
@@ -185,25 +184,25 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                             val openDownloadUrl = MenuItem("Open Download URL")
                             openDownloadUrl.onAction = EventHandler {
                                 model.showLinkPrompt(
-                                    fixOldLink(row.item.link), true
+                                    model.linkForSlug(row.item.slug), true
                                 )
                             }
                             val copyDownloadUrl = MenuItem("Copy Download URL")
                             copyDownloadUrl.onAction = EventHandler {
                                 model.showCopyPrompt(
-                                    fixOldLink(row.item.link), false
+                                    model.linkForSlug(row.item.slug), false
                                 )
                             }
                             val seriesDetails = MenuItem("Series Details")
                             seriesDetails.onAction = EventHandler {
                                 model.openSeriesDetails(
-                                    fixOldLink(row.item.seriesLink)
+                                    row.item
                                 )
                             }
                             val copySeriesLink = MenuItem("Copy Series Lihk")
                             copySeriesLink.onAction = EventHandler {
                                 model.showCopyPrompt(
-                                    fixOldLink(row.item.seriesLink),
+                                    model.linkForSlug(row.item.seriesSlug),
                                     false
                                 )
                             }
@@ -213,11 +212,8 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                                     model.showError("You can't download a series while the downloader is running.")
                                     return@EventHandler
                                 }
-                                model.urlTextField.text = row.item.seriesLink
+                                model.urlTextField.text = model.linkForSlug(row.item.seriesSlug)
                                 model.start()
-                                //model.toast(
-                                  //  "Successfully launched video downloader for: ${row.item.seriesLink}"
-                                //)
                             }
                             val pauseDownload = MenuItem("Pause Download")
                             pauseDownload.onAction = EventHandler {
@@ -247,7 +243,7 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                                 openDownloadUrl,
                                 copyDownloadUrl
                             )
-                            if (!row.item.seriesLink.isNullOrEmpty()) {
+                            if (!row.item.seriesSlug.isNullOrEmpty()) {
                                 menu.items.add(seriesDetails)
                                 menu.items.add(copySeriesLink)
                                 menu.items.add(downloadSeries)
@@ -369,8 +365,6 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
         if (!model.isRunning) {
             model.start()
         } else {
-            //todo make a way to do this in the background without effecting the current dl
-            //if found in cache just launch
             model.showError("Downloader is already running. Unable to start.")
         }
     }
@@ -465,13 +459,13 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
             about -> {
                 model.showMessage(
                     "About",
-                    "This is a FREE open source program to download videos from ${Model.WEBSITE}. That's all. :)" +
+                    "This is a FREE open source program to download videos from ${model.wcoUrl}. That's all. :)" +
                             "\nAuthor Discord: I don't have discord anymore. Contact me on Github." +
-                            "\nGithub: https://github.com/NobilityDeviant/" +
+                            "\nGithub: ${Model.GITHUB_URL}" +
                             "\nTo use this program you must first install a browser like: " +
                             "\nGoogle Chrome, Chromium, Opera, Edge, Firefox or Safari." +
                             "\nYou can choose any listed browser in the settings. Everything else should be handled automatically." +
-                            "\nYou find an episode or series link at ${Model.WEBSITE} and paste it into the field. The default settings should be enough for most people." +
+                            "\nYou find an episode or series link at ${model.wcoUrl} and paste it into the field. The default settings should be enough for most people." +
                             "\nIf you have any issues, please create an issue on Github."
                 )
             }
@@ -484,10 +478,10 @@ class MainController(private val model: Model, private val mainStage: Stage) : I
                 }
             }
             openWebsite -> {
-                model.showLinkPrompt(Model.WEBSITE, true)
+                model.showLinkPrompt(model.wcoUrl, true)
             }
             openGithub -> {
-                model.showLinkPrompt(Model.GITHUB, true)
+                model.showLinkPrompt(Model.GITHUB_URL, true)
             }
         }
     }

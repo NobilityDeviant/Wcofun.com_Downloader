@@ -16,7 +16,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="700.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="625.0" prefWidth="700.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nobility.downloader.settings.SettingsController">
   <tabs>
     <Tab text="Main Settings">
          <content>
@@ -44,6 +44,9 @@
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
                                  </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This used for a simple proxy. user:pass is not supported. Use with caution. Some browsers aren't properly configured to support proxies. " />
+                                 </tooltip>
                               </Label>
                               <TextField fx:id="fieldProxy">
                                  <HBox.margin>
@@ -63,6 +66,9 @@
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
                                  </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This used for the timeout on all internet activity. Lower = Faster, Higher = More Stability" />
+                                 </tooltip>
                               </Label>
                               <TextField fx:id="fieldTimeout" prefWidth="50.0">
                                  <HBox.margin>
@@ -85,7 +91,7 @@
                               </TextField>
                               <Button fx:id="buttonChooseDownloadFolder" mnemonicParsing="false" onAction="#handleClicks" text="Choose Folder">
                                  <HBox.margin>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="8.0" />
                                  </HBox.margin>
                               </Button>
                            </children>
@@ -96,6 +102,9 @@
                                  <HBox.margin>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
                                  </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This is the browser you use to scrape the videos. Only use the one's you currently have installed." />
+                                 </tooltip>
                               </Label>
                               <ChoiceBox fx:id="choiceBrowser" prefWidth="150.0" stylesheets="@../css/choicebox.css">
                                  <HBox.margin>
@@ -103,6 +112,63 @@
                                  </HBox.margin>
                               </ChoiceBox>
                            </children>
+                        </HBox>
+                        <HBox>
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="170.0" text="Video Quality:" textAlignment="CENTER" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
+                                 </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This is the browser you use to scrape the videos. Only use the one's you currently have installed." />
+                                 </tooltip>
+                              </Label>
+                              <ChoiceBox fx:id="choiceQuality" prefWidth="150.0" stylesheets="@../css/choicebox.css">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                 </HBox.margin>
+                              </ChoiceBox>
+                           </children>
+                        </HBox>
+                        <HBox>
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="170.0" text="Video Website Domain:" textAlignment="CENTER" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="15.0" />
+                                 </HBox.margin>
+                                 <tooltip>
+                                    <Tooltip text="This is used in case you need to manually input the new domain plus extension. It is usually done automatically." />
+                                 </tooltip>
+                              </Label>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="https://" textAlignment="CENTER" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets top="15.0" />
+                                 </HBox.margin>
+                              </Label>
+                              <TextField fx:id="fieldDomain" prefHeight="25.0" prefWidth="65.0" text="wcofun">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                 </HBox.margin>
+                              </TextField>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="." textAlignment="CENTER" textFill="WHITE">
+                                 <HBox.margin>
+                                    <Insets top="15.0" />
+                                 </HBox.margin>
+                              </Label>
+                              <TextField fx:id="fieldExtension" prefWidth="50.0" text="org">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="10.0" />
+                                 </HBox.margin>
+                              </TextField>
+                              <Button fx:id="buttonUpdateUrl" mnemonicParsing="false" onAction="#handleClicks" text="Auto Update">
+                                 <HBox.margin>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="8.0" />
+                                 </HBox.margin>
+                              </Button>
+                           </children>
+                           <VBox.margin>
+                              <Insets />
+                           </VBox.margin>
                         </HBox>
                         <HBox>
                            <children>

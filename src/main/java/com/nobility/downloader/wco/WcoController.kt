@@ -36,8 +36,11 @@ import javafx.scene.text.TextAlignment
 import javafx.scene.text.TextFlow
 import javafx.stage.Stage
 import javafx.util.Callback
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.javafx.JavaFx
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.net.URL
@@ -113,7 +116,7 @@ class WcoController : Initializable {
                         seriesDetails.onAction =
                             EventHandler {
                                 model.openSeriesDetails(
-                                    row.item.link
+                                    series = row.item
                                 )
                             }
                         val openLink =
@@ -121,7 +124,7 @@ class WcoController : Initializable {
                         openLink.onAction =
                             EventHandler {
                                 model.showLinkPrompt(
-                                    row.item.link,
+                                    model.linkForSlug(row.item.slug),
                                     true
                                 )
                             }
@@ -130,7 +133,7 @@ class WcoController : Initializable {
                         copyLink.onAction =
                             EventHandler {
                                 model.showCopyPrompt(
-                                    row.item.link,
+                                    model.linkForSlug(row.item.slug),
                                     false,
                                     stage
                                 )
@@ -143,7 +146,7 @@ class WcoController : Initializable {
                                     model.openDownloadConfirm(row.item, null)
                                     return@EventHandler
                                 }
-                                model.urlTextField.text = row.item.link
+                                model.urlTextField.text = model.linkForSlug(row.item.slug)
                                 model.start()
                             }
                         val checkForNewEpisodes =
@@ -163,20 +166,12 @@ class WcoController : Initializable {
                                     val buddyHandler = BuddyHandler(model)
                                     val result = buddyHandler.checkForNewEpisodes(row.item)
                                     if (result.data != null) {
-                                        val seriesHistory = model.settings().seriesForLink(row.item.link)
-                                        val seriesWco = model.settings().wcoHandler.seriesForLink(row.item.link)
-                                        if (seriesHistory != null) {
-                                            seriesHistory.episodes.clear()
-                                            seriesHistory.episodes.addAll(result.data.episodes)
-                                            seriesHistory.episodes.applyChangesToDb()
-                                        }
-                                        if (seriesWco != null) {
-                                            seriesWco.episodes.clear()
-                                            seriesWco.episodes.addAll(result.data.episodes)
-                                            seriesWco.episodes.applyChangesToDb()
-                                        }
-                                        row.item.episodes.clear()
-                                        row.item.episodes.addAll(result.data.episodes)
+                                        val updatedEpisodes = result.data.updatedEpisodes
+                                        val seriesHistory = model.settings().seriesForSlug(row.item.slug)
+                                        val seriesWco = model.settings().wcoHandler.seriesForSlug(row.item.slug)
+                                        seriesHistory?.updateEpisodes(updatedEpisodes, true)
+                                        seriesWco?.updateEpisodes(updatedEpisodes, true)
+                                        row.item.updateEpisodes(updatedEpisodes)
                                         withContext(Dispatchers.JavaFx) {
                                             row.item.updateEpisodeCountValue()
                                             model.showMessage(
@@ -186,13 +181,10 @@ class WcoController : Initializable {
                                         }
                                     } else {
                                         withContext(Dispatchers.JavaFx) {
-                                            model.showMessage(
-                                                "Up to date!",
-                                                "The series ${row.item.name} is up to date. No new episodes have been found.",
-                                            )
+                                            model.toast("No new episodes found for \n${row.item.name}.", stage)
                                         }
                                     }
-                                    buddyHandler.taskScope.cancel()
+                                    buddyHandler.cancel()
                                     checkingSize--
                                 }
                             }
@@ -214,17 +206,18 @@ class WcoController : Initializable {
                                     withContext(Dispatchers.JavaFx) {
                                         row.item.update(result.data)
                                         row.item.updateEpisodeCountValue()
-                                        model.showMessage(
-                                            "Success",
-                                            "Successfully updated details for: ${row.item.name}."
-                                        )
+                                        model.toast("Successfully updated series: ${row.item.name}.", stage)
                                     }
                                 } else {
                                     withContext(Dispatchers.JavaFx) {
-                                        model.showError("Failed to update details for ${row.item.name}. Error: ${result.message}")
+                                        if (result.message != "Series is already updated.") {
+                                            model.showError("Failed to update details for ${row.item.name}. Error: ${result.message}")
+                                        } else {
+                                            model.toast("Series: ${row.item.name} is already up to date.", stage)
+                                        }
                                     }
                                 }
-                                buddyHandler.taskScope.cancel()
+                                buddyHandler.cancel()
                                 checkingSize--
                             }
                         }
@@ -248,7 +241,7 @@ class WcoController : Initializable {
                                     val identity = SeriesIdentity.DUBBED
                                     series.identity = identity.type
                                     model.settings().wcoHandler.addOrUpdateSeries(series)
-                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.settings().addOrUpdateCategoryLinkWithSlug(series.slug, identity)
                                     model.toast("Successfully changed identity to Dubbed.", stage)
                                 },
                                 Option("Subbed") {
@@ -256,7 +249,7 @@ class WcoController : Initializable {
                                     val identity = SeriesIdentity.SUBBED
                                     series.identity = identity.type
                                     model.settings().wcoHandler.addOrUpdateSeries(series)
-                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.settings().addOrUpdateCategoryLinkWithSlug(series.slug, identity)
                                     model.toast("Successfully changed identity to Subbed.", stage)
                                 },
                                 Option("Cartoon") {
@@ -264,7 +257,7 @@ class WcoController : Initializable {
                                     val identity = SeriesIdentity.CARTOON
                                     series.identity = identity.type
                                     model.settings().wcoHandler.addOrUpdateSeries(series)
-                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.settings().addOrUpdateCategoryLinkWithSlug(series.slug, identity)
                                     model.toast("Successfully changed identity to Cartoon.", stage)
                                 },
                                 Option("Movie") {
@@ -272,7 +265,7 @@ class WcoController : Initializable {
                                     val identity = SeriesIdentity.MOVIE
                                     series.identity = identity.type
                                     model.settings().wcoHandler.addOrUpdateSeries(series)
-                                    model.settings().addOrUpdateLink(series.link, identity)
+                                    model.settings().addOrUpdateCategoryLinkWithSlug(series.slug, identity)
                                     model.toast("Successfully changed identity to Movie.", stage)
                                 }
                             )
@@ -285,12 +278,20 @@ class WcoController : Initializable {
                                 model.toast("Successfully removed series from the database.", stage)
                             }
                             menu.items.add(remove)
-                            val clear = MenuItem("Remove All Episodes")
-                            clear.onAction = EventHandler {
+                            val clearEpisodes = MenuItem("Remove All Episodes")
+                            clearEpisodes.onAction = EventHandler {
                                 row.item.episodes.clear()
                                 row.item.episodes.applyChangesToDb()
                                 model.toast("Successfully deleted all episodes from series.", stage)
                             }
+                            menu.items.add(clearEpisodes)
+                            val clearGenres = MenuItem("Remove All Genres")
+                            clearGenres.onAction = EventHandler {
+                                row.item.genres.clear()
+                                row.item.genres.applyChangesToDb()
+                                model.toast("Successfully deleted all genres from series.", stage)
+                            }
+                            menu.items.add(clearGenres)
                         }
                         row.contextMenu = menu
                         row.onMouseClicked =
@@ -367,7 +368,10 @@ class WcoController : Initializable {
             link.text = identity.toString()
             link.tooltip = Tooltip(identity.toString())
             link.setOnAction {
-                model.showLinkPrompt(Model.WEBSITE + "/" + identity.link, true)
+                model.showLinkPrompt(
+                    model.linkForSlug(identity.slug),
+                    true
+                )
             }
             val textFlow = TextFlow(link)
             textFlow.textAlignment = TextAlignment.CENTER
@@ -394,7 +398,10 @@ class WcoController : Initializable {
                             search()
                         },
                         Option("Open Link") {
-                            model.showLinkPrompt(g.link, true)
+                            model.showLinkPrompt(
+                                model.linkForSlug(g.slug),
+                                true
+                            )
                         }
                     )
                 }

@@ -43,6 +43,7 @@ import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import java.util.logging.Level
 import java.util.logging.Logger
+import javax.net.ssl.HttpsURLConnection
 import kotlin.system.exitProcess
 
 
@@ -61,6 +62,7 @@ class Model {
     var isClientUpdating = false
     var developerMode = false
     var isUpdatingWco = false
+    val updateManager = UpdateManager(this)
 
     @Volatile
     var downloadsFinishedForSession = 0
@@ -148,8 +150,8 @@ class Model {
                 showError(
                     "You must input a series or show link first." +
                             "\n\nExamples:" +
-                            "\nSeries: $EXAMPLE_SERIES\n" +
-                            "\nEpisode: $EXAMPLE_SHOW"
+                            "\nSeries: $exampleSeries\n" +
+                            "\nEpisode: $exampleEpisode"
                 )
                 return false
             }
@@ -171,9 +173,25 @@ class Model {
         return true
     }
 
-    fun downloadNewEpisodesForSeries(seriesList: List<Series>) {
-        println("Checking ${seriesList.size} series for new episodes.")
-        downloadNewEpisodesForSeries(seriesList)
+    fun downloadNewEpisodesForSeries(
+        seriesList: List<Series>
+    ) {
+        taskScope.launch {
+            println("Checking ${seriesList.size} series for new episodes.")
+            var updated = 0
+            val buddyHandler = BuddyHandler(this@Model)
+            seriesList.forEach {
+                val result = buddyHandler.checkForNewEpisodes(it)
+                if (result.data != null) {
+                    it.updateEpisodes(result.data.updatedEpisodes)
+                    println("Added ${result.data.newEpisodes.size} new episodes to series ${it.name}")
+                    updated++
+                }
+            }
+            if (updated > 0) {
+                println("Successfully added new updates for $updated series history.")
+            }
+        }
     }
 
     fun start() {
@@ -243,49 +261,55 @@ class Model {
         isRunning = false
     }
 
-    private fun downloadUserAgents() {
-        val resources = File(".${File.separator}resources${File.separator}")
+    private suspend fun loadUserAgents() = withContext(Dispatchers.IO) {
+        try {
+            userAgents.addAll(
+                Files.readAllLines(
+                    File("./resources/$USER_AGENTS_FILE_NAME").toPath()
+                )
+            )
+            //println("Successfully loaded " + userAgents.size + " user agents.")
+        } catch (e: Exception) {
+            println("Failed to load /resources/$USER_AGENTS_FILE_NAME attempting to download them.")
+            downloadUserAgents()
+        }
+    }
+
+    private suspend fun downloadUserAgents() = withContext(Dispatchers.IO) {
+        val resources = File("./resources/")
         if (!resources.exists()) {
             if (!resources.mkdir()) {
                 println("Failed to find or create resources folder. Unable to download user agents.")
-                return
+                return@withContext
             }
         }
-        val userAgentsFile = File("${resources.absolutePath}${File.separator}ua.txt")
-        taskScope.launch(Dispatchers.IO) {
-            val buffer = ByteArray(2048)
-            try {
-                BufferedInputStream(
-                    URL(
-                        "https://www.dropbox.com/s/42q46p69n4b84o7/ua.txt?dl=1"
-                    ).openStream()
-                ).use { `in` ->
-                    FileOutputStream(userAgentsFile).use { fos ->
-                        BufferedOutputStream(fos, buffer.size).use { bos ->
-                            var bytesRead: Int
-                            while (`in`.read(buffer, 0, 2048).also { bytesRead = it } != -1) {
-                                bos.write(buffer, 0, bytesRead)
-                            }
-                            println("Successfully downloaded user agents.")
+        val userAgentsFile = File("${resources.absolutePath}/$USER_AGENTS_FILE_NAME")
+        val buffer = ByteArray(2048)
+        try {
+            BufferedInputStream(
+                URL(USER_AGENTS_LINK).openStream()
+            ).use { input ->
+                FileOutputStream(userAgentsFile).use { fos ->
+                    BufferedOutputStream(fos, buffer.size).use { bos ->
+                        var bytesRead: Int
+                        while (input.read(buffer, 0, 2048).also { bytesRead = it } != -1) {
+                            bos.write(buffer, 0, bytesRead)
                         }
-                    }
-                    try {
-                        for (s in Files.readAllLines(userAgentsFile.toPath())) {
-                            if (!s.contains("-->>")) {
-                                userAgents.add(s)
-                            }
-                        }
-                        println("Successfully loaded " + userAgents.size + " user agents.")
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        println("Failed to read downloaded user agents file. Defaulting to using one.")
+                        println("Successfully downloaded user agents.")
                     }
                 }
-            } catch (e: IOException) {
-                println("Failed to download user agents.")
-                println("Download them manually and place them in the resources folder.")
-                println("Download Link: https://www.dropbox.com/s/42q46p69n4b84o7/ua.txt?dl=1")
+                try {
+                    userAgents.addAll(Files.readAllLines(userAgentsFile.toPath()))
+                    println("Successfully loaded " + userAgents.size + " user agents.")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    println("Failed to read downloaded user agents file. Defaulting to using one.")
+                }
             }
+        } catch (e: IOException) {
+            println("Failed to download user agents.")
+            println("Download them manually and place them in the resources folder.")
+            println("Download Link: $USER_AGENTS_LINK")
         }
     }
 
@@ -342,12 +366,8 @@ class Model {
 
     private var detailsStage: Stage = Stage()
 
-    fun openSeriesDetails(link: String) {
-        if (link.isEmpty()) {
-            toast("This episode doesn't have a series link.")
-            return
-        }
-        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "seriesdetails.fxml"))
+    fun openSeriesDetails(seriesSlug: String) {
+        val loader = FXMLLoader(Main::class.java.getResource(FX_PATH + "series_details.fxml"))
         try {
             val root = loader.load<Parent>()
             val scene = Scene(root)
@@ -366,11 +386,26 @@ class Model {
             detailsStage.scene = scene
             detailsStage.sizeToScene()
             detailsStage.show()
-            loader.getController<SeriesDetailsController>()?.setup(this, detailsStage, link)
+            loader.getController<SeriesDetailsController>()?.setup(this, detailsStage, seriesSlug)
         } catch (e: Exception) {
             e.printStackTrace()
             println("Failed to show video details window. Error: ${e.localizedMessage}")
         }
+    }
+
+    fun openSeriesDetails(episode: Episode? = null, series: Series? = null) {
+        val slug: String = if (series != null) {
+            series.slug
+        } else if (episode != null) {
+            episode.seriesSlug
+        } else {
+            ""
+        }
+        if (slug.isEmpty()) {
+            toast("This episode doesn't have a series link.")
+            return
+        }
+        openSeriesDetails(slug)
     }
 
     private val settingsStage: Stage = Stage()
@@ -421,6 +456,13 @@ class Model {
     private val downloadConfirmStage: Stage = Stage()
 
     fun openDownloadConfirm(series: Series, episode: Episode?) {
+        var mSeries = series
+        if (mSeries.episodes.isEmpty()) {
+            val wcoSeries = store.wcoHandler.seriesForSlug(series.slug)
+            if (wcoSeries != null && wcoSeries.episodes.isNotEmpty()) {
+                mSeries = wcoSeries
+            }
+        }
         downloadConfirmStage.title = "Download Series"
         val icon = Main::class.java.getResourceAsStream(MAIN_ICON)
         if (icon != null) {
@@ -438,7 +480,12 @@ class Model {
                         && con.parameterTypes[2] == Series::class.java
                         && con.parameterTypes[3] == Episode::class.java
                     ) {
-                        return@Callback con.newInstance(this, downloadConfirmStage, series, episode)
+                        return@Callback con.newInstance(
+                            this,
+                            downloadConfirmStage,
+                            mSeries,
+                            episode
+                        )
                     }
                 }
                 return@Callback controllerType.getDeclaredConstructor().newInstance()
@@ -645,12 +692,12 @@ class Model {
         return added
     }
 
-    fun addSeriesToQueue(series: Series): Int {
-        return addEpisodesToQueue(series.episodes)
-    }
+    //fun addSeriesToQueue(series: Series): Int {
+      //  return addEpisodesToQueue(series.episodes)
+    //}
 
     @get:Synchronized
-    val nextLink: Episode?
+    val nextEpisode: Episode?
         get() {
             if (episodes.isEmpty()) {
                 return null
@@ -915,7 +962,7 @@ class Model {
         }
     }
 
-    fun showCopyPrompt(message: String, text: String, prompt: Boolean, stage: Stage) {
+    private fun showCopyPrompt(message: String, text: String, prompt: Boolean, stage: Stage) {
         if (prompt) {
             showConfirm(message) {
                 copyToClipboard(text)
@@ -927,7 +974,7 @@ class Model {
         }
     }
 
-    fun copyToClipboard(text: String) {
+    private fun copyToClipboard(text: String) {
         val clipboard = Clipboard.getSystemClipboard()
         val content = ClipboardContent()
         content.putString(text)
@@ -935,6 +982,7 @@ class Model {
     }
 
     fun showLinkPrompt(link: String, prompt: Boolean) {
+        System.err.println("PROMPT: $link")
         if (prompt) {
             showConfirm(
                 """
@@ -1034,32 +1082,6 @@ class Model {
         }
     }
 
-    val updateManager = UpdateManager(this)
-
-    init {
-
-        store.loadSettings()
-
-        try {
-            userAgents.addAll(
-                Files.readAllLines(
-                    File(
-                        "." + File.separator
-                                + "resources" + File.separator + "ua.txt"
-                    ).toPath()
-                )
-            )
-            println("Successfully loaded " + userAgents.size + " user agents.")
-        } catch (e: Exception) {
-            println("Unable to load /resources/ua.txt (UserAgents) attempting to download them.")
-            downloadUserAgents()
-        }
-        if (store.booleanSetting(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
-            System.setProperty("webdriver.chrome.silentOutput", "true")
-            Logger.getLogger("org.openqa.selenium").level = Level.OFF
-        }
-    }
-
     fun settings(): BoxStoreHandler {
         return store
     }
@@ -1093,13 +1115,137 @@ class Model {
         Toast.makeToast(stage, text, e, store.doubleSetting(Defaults.TOASTTRANSPARENCY))
     }
 
+    /**
+     * This is used to update the wcofun url in the settings.
+     * First we iterate through all the urls found inside the repository
+     * and if the url changed, then we update the domain name and extension.
+     * I have decided to use an external (and easily updatable) text file just in case
+     * the website changes drastically.
+     */
+    suspend fun updateWcoUrl() = withContext(Dispatchers.IO) {
+        val urls = mutableListOf<String>()
+        try {
+            BufferedReader(
+                InputStreamReader(URL(WEBSITE_URLS_LINK).openStream())
+            ).use { input ->
+                while (true) {
+                    val line = input.readLine()
+                    if (!line.isNullOrEmpty()) {
+                        urls.add(line)
+                    } else {
+                        break
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            urls.addAll(
+                listOf(
+                    "https://wcofun.com",
+                    "https://wcofun.org"
+                )
+            )
+        }
+        for (u in urls) {
+            var con: HttpsURLConnection? = null
+            try {
+                con = URL(u).openConnection() as HttpsURLConnection
+                con.addRequestProperty(
+                    "Accept",
+                    "text/html"
+                )
+                con.instanceFollowRedirects = true
+                con.connectTimeout = 30_000
+                con.readTimeout = 30_000
+                con.addRequestProperty("User-Agent", randomUserAgent)
+                con.connect()
+                val url = con.url.toString()
+                val domainWithoutExtension = Tools.extractDomainFromLink(url)
+                val extension = Tools.extractExtensionFromLink(url)
+                var updated = false
+                if (store.stringSetting(Defaults.DOMAIN) != domainWithoutExtension) {
+                    store.setSetting(Defaults.DOMAIN, domainWithoutExtension)
+                    updated = true
+                }
+                if (store.stringSetting(Defaults.EXTENSION) != extension) {
+                    store.setSetting(Defaults.EXTENSION, extension)
+                    updated = true
+                }
+                if (updated) {
+                    urlTextField.promptTextProperty().value = exampleSeries
+                    println("Successfully updated main url to: ${con.url}")
+                }
+                break
+            } catch (e: Exception) {
+                debugErr("Failed to check for updated website url with: $u")
+            } finally {
+                con?.disconnect()
+            }
+        }
+    }
+
+    val wcoUrl: String get() {
+        return "https://" +
+                settings().stringSetting(Defaults.DOMAIN) +
+                "." +
+                settings().stringSetting(Defaults.EXTENSION) +
+                "/"
+    }
+
+    fun linkForSlug(slug: String): String {
+        return wcoUrl + slug
+    }
+
+    private val exampleEpisode: String get() = "$wcoUrl$EXAMPLE_EPISODE"
+
+    val exampleSeries: String get() = "$wcoUrl$EXAMPLE_SERIES"
+
+    fun episodeForSlug(
+        series: Series,
+        slug: String
+    ): Episode? {
+        series.episodes.forEach {
+            if (it.slug == slug) {
+                return it
+            }
+        }
+        return null
+    }
+
+    fun hasEpisode(series: Series, episode: Episode?): Boolean {
+        if (episode == null) {
+            return false
+        }
+        series.episodes.forEach {
+            if (it.slug == episode.slug) {
+                return true
+            }
+        }
+        return false
+    }
+
+    init {
+        taskScope.launch(Dispatchers.IO) {
+            store.loadSettings()
+            updateWcoUrl()
+            loadUserAgents()
+            if (store.booleanSetting(Defaults.SILENTDRIVER) && !DEBUG_MODE) {
+                System.setProperty("webdriver.chrome.silentOutput", "true")
+                Logger.getLogger("org.openqa.selenium").level = Level.OFF
+            }
+            if (!store.booleanSetting(Defaults.NEW_DB_WARNING)) {
+                println("[WARNING] Version 2.0 and higher is incompatible with all old series, episode and download data." +
+                        "\nAll old data will be updated to be compatible, but some might not work." +
+                        "\nIf you are having any issues, please download the new package and new series data from Github and use it seperately from your current one.")
+                store.setSetting(Defaults.NEW_DB_WARNING, true)
+            }
+        }
+    }
+
     companion object {
-        const val OLD_WEBSITE = "https://www.wcofun.net"
-        const val WEBSITE = "https://www.wcofun.com"
-        const val GITHUB = "https://github.com/NobilityDeviant/Wcofun.com_Downloader"
-        const val EXAMPLE_SERIES = "$WEBSITE/anime/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level"
-        const val EXAMPLE_SHOW =
-            "$WEBSITE/ive-been-killing-slimes-for-300-years-and-maxed-out-my-level-episode-1-english-dubbed"
+        const val GITHUB_URL = "https://github.com/NobilityDeviant/Wcofun.com_Downloader"
+        const val EXAMPLE_SERIES = "anime/negima"
+        const val EXAMPLE_EPISODE =
+            "strange-planet-episode-1-the-flying-machine"
         const val DEBUG_MODE = false
         const val FX_PATH = "/fx/"
         private const val IMAGE_PATH = "/images/"
@@ -1108,5 +1254,8 @@ class Model {
         const val SETTINGS_ICON = IMAGE_PATH + "icon.png"
         const val MAIN_ICON = IMAGE_PATH + "icon.png"
         const val NO_IMAGE_ICON = IMAGE_PATH + "no-image.png"
+        const val USER_AGENTS_LINK = "https://raw.githubusercontent.com/NobilityDeviant/Wcofun.com_Downloader/master/useragents.txt"
+        const val USER_AGENTS_FILE_NAME = "useragents.txt"
+        const val WEBSITE_URLS_LINK = "https://raw.githubusercontent.com/NobilityDeviant/Wcofun.com_Downloader/master/wcourls.txt"
     }
 }

@@ -1,7 +1,7 @@
-package com.nobility.downloader
+package com.nobility.downloader.driver
 
+import com.nobility.downloader.Model
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.settings.DriverDefaults
 import io.github.bonigarcia.wdm.WebDriverManager
 import org.openqa.selenium.PageLoadStrategy
 import org.openqa.selenium.Proxy
@@ -31,7 +31,6 @@ abstract class DriverBase {
     private var headless = true
 
     //needed for series details controller.
-    //yes I know it's bad, but it lags when launched. we need to load it afterwards.
     protected constructor()
 
     protected constructor(model: Model) {

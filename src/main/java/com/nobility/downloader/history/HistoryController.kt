@@ -75,26 +75,23 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
                     if (isEmpty == false) {
                         val seriesDetails = MenuItem("Series Details")
                         seriesDetails.onAction =
-                            EventHandler { model.openSeriesDetails(row.item.link) }
+                            EventHandler { model.openSeriesDetails(series = row.item) }
                         val openLink = MenuItem("Open Series Link")
                         openLink.onAction =
-                            EventHandler { model.showLinkPrompt(row.item.link, true) }
+                            EventHandler { model.showLinkPrompt(
+                                model.linkForSlug(row.item.slug),
+                                true
+                            ) }
                         val copyLink = MenuItem("Copy Series Link")
                         copyLink.onAction =
-                            EventHandler { model.showCopyPrompt(row.item.link, false, stage) }
+                            EventHandler { model.showCopyPrompt(model.linkForSlug(row.item.slug), false, stage) }
                         val downloadSeries = MenuItem("Download Series")
                         downloadSeries.onAction = EventHandler {
                             if (model.isRunning) {
                                 model.openDownloadConfirm(row.item, null)
-                                /*val added = model.addSeriesToQueue(row.item)
-                                if (added > 0) {
-                                    model.toast("Added $added series episodes to download queue.")
-                                } else {
-                                    model.toast("All series episodes are already in queue.")
-                                }*/
                                 return@EventHandler
                             }
-                            model.urlTextField.text = row.item.link
+                            model.urlTextField.text = model.linkForSlug(row.item.slug)
                             model.start()
                         }
                         val checkForNewEpisodes = MenuItem("Check For New Episodes")
@@ -106,26 +103,24 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
                             }
                             model.toast("Checking for new episodes... Please wait.", stage)
                             checkingSize++
-                            val seriesHistory = model.settings().seriesForLink(row.item.link)
-                            val seriesWco = model.settings().wcoHandler.seriesForLink(row.item.link)
+                            val seriesHistory = model.settings().seriesForSlug(row.item.slug)
+                            val seriesWco = model.settings().wcoHandler.seriesForSlug(row.item.slug)
                             if (seriesHistory == null) {
-                                model.toast("Series not found in history. Please download it again. Link: ${row.item.link}")
+                                model.toast("Series not found in history. Check the console.")
+                                println("Series not found in history. Please download it again. " +
+                                        "Link: ${model.linkForSlug(row.item.slug)}")
                                 return@EventHandler
                             }
                             taskScope.launch {
                                 val buddyHandler = BuddyHandler(model)
                                 val result = buddyHandler.checkForNewEpisodes(seriesHistory)
                                 if (result.data != null) {
-                                    seriesHistory.episodes.clear()
-                                    seriesHistory.episodes.addAll(result.data.episodes)
-                                    seriesHistory.episodes.applyChangesToDb()
+                                    val updatedEpisodes = result.data.updatedEpisodes
+                                    seriesHistory.updateEpisodes(updatedEpisodes, true)
                                     //optional wco db update
-                                    seriesWco?.episodes?.clear()
-                                    seriesWco?.episodes?.addAll(result.data.episodes)
-                                    seriesWco?.episodes?.applyChangesToDb()
-                                    row.item.episodes.clear()
-                                    row.item.episodes.addAll(result.data.episodes)
-                                    buddyHandler.taskScope.cancel()
+                                    seriesWco?.updateEpisodes(updatedEpisodes, true)
+                                    row.item.updateEpisodes(updatedEpisodes)
+                                    buddyHandler.cancel()
                                     checkingSize--
                                     withContext(Dispatchers.JavaFx) {
                                         row.item.updateEpisodeCountValue()
@@ -137,10 +132,7 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
                                 } else {
                                     checkingSize--
                                     withContext(Dispatchers.JavaFx) {
-                                        model.showMessage(
-                                            "Up to date!",
-                                            "The series ${row.item.name} is up to date. No new episodes have been found.",
-                                        )
+                                        model.toast("No new episodes found for \n${row.item.name}.", stage)
                                     }
                                 }
                             }
@@ -173,7 +165,7 @@ class HistoryController(private val model: Model, private val stage: Stage) : In
         }
         episodesColumn.cellValueFactory = PropertyValueFactory("episodesCount")
         linkColumn.setCellValueFactory {
-            SimpleStringProperty(it.value.link)
+            SimpleStringProperty(model.linkForSlug(it.value.slug))
         }
         for (s in model.settings().seriesBox.all) {
             s.updateEpisodeCountValue()

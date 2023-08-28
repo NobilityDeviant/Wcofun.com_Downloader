@@ -1,6 +1,6 @@
 package com.nobility.downloader.entities
 
-enum class SeriesIdentity(val link: String, val type: Int) {
+enum class SeriesIdentity(val slug: String, val type: Int) {
     DUBBED("dubbed-anime-list", 0),
     SUBBED("subbed-anime-list", 1),
     CARTOON("cartoon-list", 2),

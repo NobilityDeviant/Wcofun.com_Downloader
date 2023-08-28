@@ -23,40 +23,76 @@ import javax.net.ssl.HttpsURLConnection
 
 object Tools {
 
-    fun fixTitle(_title: String, replaceDotAtStart: Boolean = false): String {
-        var title = _title
+    @JvmStatic
+    fun extractSlugFromLink(link: String?): String {
+        if (link.isNullOrEmpty()) {
+            return ""
+        }
+        return try {
+            link.substring(
+                //after the https:// and after the .com/
+                link.ordinalIndexOf("/", 3) + 1
+            )
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    fun extractExtensionFromLink(link: String): String {
+        return link.substringAfterLast(".").substringBefore("/")
+    }
+
+    /**
+     * Extracts the domain name without the www. (because it's never needed)
+     * and without the extension.
+     */
+    fun extractDomainFromLink(link: String): String {
+        val mLink = link.replace("www.", "")
+        val key1 = "https://"
+        return mLink.substring(
+            mLink.indexOf(key1) + key1.length,
+            mLink.indexOf(".")
+        )
+    }
+
+    /**
+     * This used to fix strings in order to be used as files.
+     * Files can't contain certain characters.
+     */
+    fun fixTitle(title: String, replaceDotAtStart: Boolean = false): String {
+        var mTitle = title
         if (replaceDotAtStart) {
-            if (title.startsWith(".")) {
-                title = title.substring(1)
+            if (mTitle.startsWith(".")) {
+                mTitle = mTitle.substring(1)
             }
         }
-        return title.trim { it <= ' ' }
+        return mTitle.trim { it <= ' ' }
             .replace("[\\\\/*?\"<>|]".toRegex(), "_")
             .replace(":".toRegex(), ";")
             .replace("ﾒ", "'")
     }
 
     //used to save/retrieve images for series
-    fun stripExtraFromTitle(_title: String): String {
-        var title = _title
+    private fun stripExtraFromTitle(title: String): String {
+        var mTitle = title
         val subKeyword = "English Subbed"
         val dubKeyword = "English Dubbed"
-        if (title.contains(subKeyword)) {
-            title = title.substringBefore(subKeyword)
-        } else if (title.contains(dubKeyword)) {
-            title = title.substringBefore(dubKeyword)
+        if (mTitle.contains(subKeyword)) {
+            mTitle = mTitle.substringBefore(subKeyword)
+        } else if (mTitle.contains(dubKeyword)) {
+            mTitle = mTitle.substringBefore(dubKeyword)
         }
-        return title.trim()
+        return mTitle.trim()
     }
 
     //used to fetch image from files for an episode
-    fun seasonNameFromEpisode(_title: String): String {
-        var title = _title
+    private fun seasonNameFromEpisode(title: String): String {
+        var mTitle = title
         val episodeKeyword = "Episode"
-        if (title.contains(episodeKeyword)) {
-            title = title.substringBefore(episodeKeyword)
+        if (mTitle.contains(episodeKeyword)) {
+            mTitle = mTitle.substringBefore(episodeKeyword)
         }
-        return title
+        return mTitle
     }
 
     fun titleForImages(title: String): String {
@@ -70,16 +106,6 @@ object Tools {
         ).trim() + ".jpg"
     }
 
-    @JvmStatic
-    fun fixOldLink(link: String?): String {
-        if (link == null) {
-            return ""
-        }
-        return if (link.startsWith(Model.OLD_WEBSITE)) {
-            link.replace(Model.OLD_WEBSITE, Model.WEBSITE)
-        } else link
-    }
-
     @JvmField
     val percentFormat = DecimalFormat("#.##%")
 
@@ -89,17 +115,17 @@ object Tools {
     }
 
     @JvmStatic
-    fun bytesToString(_bytes: Long): String {
-        var bytes = _bytes
-        if (-1000 < bytes && bytes < 1000) {
-            return "$bytes B"
+    fun bytesToString(bytes: Long): String {
+        var mBytes = bytes
+        if (-1000 < mBytes && mBytes < 1000) {
+            return "$mBytes B"
         }
         val ci: CharacterIterator = StringCharacterIterator("kMGTPE")
-        while (bytes <= -999950 || bytes >= 999950) {
-            bytes /= 1000
+        while (mBytes <= -999950 || mBytes >= 999950) {
+            mBytes /= 1000
             ci.next()
         }
-        return String.format("%.1f %cB", bytes / 1000.0, ci.current())
+        return String.format("%.1f %cB", mBytes / 1000.0, ci.current())
     }
 
     const val dateFormat = "MM/dd/yyyy hh:mm:ssa"
@@ -173,11 +199,6 @@ object Tools {
             while (s2Matcher.find()) {
                 s2Number = s2Matcher.group(0)
             }
-            /*if (s2Number.isEmpty() && s1Number.isNotEmpty()) {
-                return@Comparator 1
-            } else if (s2Number.isNotEmpty() && s1Number.isEmpty()) {
-                return@Comparator -1
-            }*/
             if (s1Number.isNotEmpty() && s2Number.isNotEmpty()) {
                 return@Comparator Integer.parseInt(
                     CharMatcher.inRange('0', '9').retainFrom(s1Number)
@@ -191,39 +212,6 @@ object Tools {
         return@Comparator e1.compareTo(e2)
     }
 
-    private val seriesComparatorForTextFlow = Comparator { e1: TextFlow, e2: TextFlow ->
-        if (e1.children.isEmpty() || e2.children.isEmpty()) {
-            return@Comparator 0
-        }
-        val e1Text = (e1.children.get(0) as Text).text
-        val e2Text = (e2.children.get(0) as Text).text
-        try {
-            val seasonKey = "Season"
-            val seasonPattern = Pattern.compile("$seasonKey \\d{0,3}")
-            val s1Matcher = seasonPattern.matcher(e1Text)
-            val s2Matcher = seasonPattern.matcher(e2Text)
-            var s1Number = ""
-            var s2Number = ""
-            while (s1Matcher.find()) {
-                s1Number = s1Matcher.group(0)
-            }
-            while (s2Matcher.find()) {
-                s2Number = s2Matcher.group(0)
-            }
-            if (s1Number.isNotEmpty() && s2Number.isNotEmpty()) {
-                return@Comparator Integer.parseInt(
-                    CharMatcher.inRange('0', '9').retainFrom(s1Number)
-                ).compareTo(Integer.parseInt(
-                    CharMatcher.inRange('0', '9').retainFrom(s2Number)
-                ))
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return@Comparator e1Text.compareTo(e2Text)
-    }
-
-
     private val isSeriesComparator = Comparator { e1: String, e2: String ->
         val key = "Season"
         if (e1.contains(key) && !e2.contains(key)) {
@@ -235,29 +223,12 @@ object Tools {
         }
     }
 
-    private val isSeriesComparatorForTextFlow = Comparator { e1: TextFlow, e2: TextFlow ->
-        if (e1.children.isEmpty() || e2.children.isEmpty()) {
-            return@Comparator 0
-        }
-        val e1Text = (e1.children.get(0) as Text).text
-        val e2Text = (e2.children.get(0) as Text).text
-        val key = "Season"
-        println("$e1Text:$e2Text")
-        if (e1Text.contains(key) && !e2Text.contains(key)) {
-            return@Comparator 0
-        } else if (e2Text.contains(key) && !e1Text.contains(key)) {
-            return@Comparator 0
-        } else {
-            return@Comparator -1
-        }
-    }
-
     val abcTextFlowComparator = Comparator { e1: TextFlow, e2: TextFlow ->
         if (e1.children.isEmpty() || e2.children.isEmpty()) {
             return@Comparator 0
         }
-        val e1Text = (e1.children.get(0) as Text).text
-        val e2Text = (e2.children.get(0) as Text).text
+        val e1Text = (e1.children[0] as Text).text
+        val e2Text = (e2.children[0] as Text).text
         return@Comparator e1Text.compareTo(e2Text)
     }
 
@@ -267,8 +238,8 @@ object Tools {
         try {
             val con = URL(imageLink).openConnection() as HttpURLConnection
             con.setRequestProperty("user-agent", model.randomUserAgent)
-            con.readTimeout = 10000
-            con.connectTimeout = 10000
+            con.readTimeout = 15000
+            con.connectTimeout = 15000
             con.connect()
             withContext(Dispatchers.JavaFx) {
                 try {
@@ -331,9 +302,9 @@ object Tools {
         con.readTimeout = timeout
         con.setRequestProperty("Range", "bytes=$offset-")
         con.addRequestProperty("User-Agent", userAgent)
-        if (offset != 0L) {
-            println("Detected incomplete images: $link - Attempting to finish it.")
-        }
+        //if (offset != 0L) {
+          //  println("Detected incomplete images: $link - Attempting to finish it.")
+        //}
         val buffer = ByteArray(2048)
         val bis = BufferedInputStream(con.inputStream)
         val fos = FileOutputStream(output, true)

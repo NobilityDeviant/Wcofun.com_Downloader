@@ -1,4 +1,4 @@
-package com.nobility.downloader.downloads
+package com.nobility.downloader.utils
 
 import com.nobility.downloader.Model
 import com.nobility.downloader.entities.Download

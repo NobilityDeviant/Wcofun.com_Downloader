@@ -4,7 +4,7 @@ import com.nobility.downloader.Model
 import com.nobility.downloader.entities.settings.SettingsMeta
 import com.nobility.downloader.entities.settings.SettingsMeta_
 import com.nobility.downloader.settings.Defaults
-import com.nobility.downloader.utils.Tools.fixOldLink
+import com.nobility.downloader.settings.Quality
 import io.objectbox.Box
 import io.objectbox.query.QueryBuilder.StringOrder
 import java.io.File
@@ -26,6 +26,77 @@ class BoxStoreHandler(model: Model) {
 
     init {
         wcoHandler = WcoHandler(databasePath, model)
+
+        downloadBox.query().filter {
+            it.slug.isNullOrEmpty() || it.seriesSlug.isNullOrEmpty()
+        }.build().use { query ->
+            try {
+                val downloads = query.find()
+                if (downloads.isNotEmpty()) {
+                    downloads.forEach {
+                        it.updateSlugs()
+                        downloadBox.put(it)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        seriesBox.query().filter {
+            it.slug.isNullOrEmpty()
+        }.build().use { query ->
+            try {
+                val series = query.find()
+                if (series.isNotEmpty()) {
+                    val episodesBox: Box<Episode> = myData.boxFor(Episode::class.java)
+                    series.forEach {
+                        it.updateSlug()
+                        it.episodes.forEach { episode ->
+                            episode.updateSlugs()
+                            episodesBox.put(episode)
+                        }
+                        it.genres.forEach { genre ->
+                            genre.updateSlug()
+                        }
+                        seriesBox.put(it)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        wcoHandler.seriesBox.query().filter {
+            it.slug.isNullOrEmpty()
+        }.build().use { query ->
+            try {
+                val series = query.find()
+                if (series.isNotEmpty()) {
+                    val episodesBox: Box<Episode> = wcoHandler.wcoData.boxFor(
+                        Episode::class.java
+                    )
+                    series.forEach {
+                        it.updateSlug()
+                        it.episodes.forEach { episode ->
+                            episode.updateSlugs()
+                            episodesBox.put(episode)
+                        }
+                        it.genres.forEach { genre ->
+                            genre.updateSlug()
+                        }
+                        wcoHandler.seriesBox.put(it)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        linksBox.query().filter {
+            it.slug.isNullOrEmpty()
+        }.build().use { query ->
+            try {
+                val links = query.find()
+                if (links.isNotEmpty()) {
+                    links.forEach {
+                        it.updateSlug()
+                        linksBox.put(it)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     fun loadSettings() {
@@ -117,10 +188,17 @@ class BoxStoreHandler(model: Model) {
         }
     }
 
-    fun downloadForLink(link: String?): Download? {
+    fun downloadForSlugAndQuality(slug: String, quality: Quality): Download? {
         try {
             downloadBox.query()
-                .equal(Download_.link, fixOldLink(link), StringOrder.CASE_SENSITIVE).build().use { query ->
+                .equal(
+                    Download_.slug,
+                    slug,
+                    StringOrder.CASE_SENSITIVE
+                ).and().equal(
+                    Download_.resolution,
+                    quality.resolution.toLong()
+                ).build().use { query ->
                     if (query.findFirst() != null) {
                         return query.findFirst()
                     }
@@ -146,7 +224,11 @@ class BoxStoreHandler(model: Model) {
     private fun replaceSeries(series: Series): Boolean {
         try {
             seriesBox.query()
-                .equal(Series_.name, series.name, StringOrder.CASE_SENSITIVE).build().use { query ->
+                .equal(
+                    Series_.name,
+                    series.name,
+                    StringOrder.CASE_SENSITIVE
+                ).build().use { query ->
                     val queried = query.find()
                     if (queried.isNotEmpty()) {
                         for (s in queried) {
@@ -169,67 +251,73 @@ class BoxStoreHandler(model: Model) {
         seriesBox.remove(series)
     }
 
-    fun seriesForLink(link: String): Series? {
+    fun seriesForSlug(slug: String): Series? {
         try {
             seriesBox.query()
-                .equal(Series_.link, link, StringOrder.CASE_SENSITIVE)
-                .or()
-                .equal(Series_.movieLink, link, StringOrder.CASE_SENSITIVE)
-                .build()
+                .equal(
+                    Series_.slug,
+                    slug,
+                    StringOrder.CASE_SENSITIVE
+                ).build()
                 .use { query -> return query.findUnique() }
         } catch (ignored: Exception) {
         }
         return null
     }
 
-    fun areLinksEmpty(): Boolean {
+    fun areCatgeoryLinksEmpty(): Boolean {
         return linksBox.isEmpty
     }
 
-    fun allLinks(): List<String> {
-        val set = mutableSetOf<String>()
-        for (link in linksBox.all) {
-            set.add(link.url)
-        }
-        return set.toList()
+    fun allCategoryLinks(): List<CategoryLink> {
+        return linksBox.all.distinctBy { it.slug }
     }
 
-    fun addLink(url: String, identity: SeriesIdentity): Boolean {
-        if (linkForSeriesUrl(url) == null) {
-            linksBox.put(CategoryLink(url, identity.type))
+    fun addCatgeoryLinkWithSlug(
+        slug: String,
+        identity: SeriesIdentity
+    ): Boolean {
+        if (categoryLinkForSeriesSlug(slug) == null) {
+            linksBox.put(CategoryLink(slug, identity.type))
             return true
         }
         return false
     }
 
-    fun addOrUpdateLink(url: String, identity: SeriesIdentity): Boolean {
-        val link = linkForSeriesUrl(url)
+    fun addOrUpdateCategoryLinkWithSlug(slug: String, identity: SeriesIdentity): Boolean {
+        val link = categoryLinkForSeriesSlug(slug)
         return if (link == null) {
-            linksBox.put(CategoryLink(url, identity.type))
+            linksBox.put(CategoryLink(slug, identity.type))
             true
         } else {
-            link.url = url
+            link.slug = slug
             link.type = identity.type
             linksBox.put(link)
             true
         }
     }
 
-    fun addLinks(list: List<String>, identity: SeriesIdentity): Int {
+    fun addCategoryLinksWithSlug(
+        slugs: List<String>,
+        identity: SeriesIdentity
+    ): Int {
         var added = 0
-        for (s in list) {
-            if (addLink(s, identity)) {
+        slugs.forEach {
+            if (addCatgeoryLinkWithSlug(it, identity)) {
                 added++
             }
         }
         return added
     }
 
-    private fun linkForSeriesUrl(url: String): CategoryLink? {
+    private fun categoryLinkForSeriesSlug(slug: String): CategoryLink? {
         try {
             linksBox.query()
-                .equal(CategoryLink_.url, url, StringOrder.CASE_INSENSITIVE)
-                .build()
+                .equal(
+                    CategoryLink_.slug,
+                    slug,
+                    StringOrder.CASE_INSENSITIVE
+                ).build()
                 .use {
                     return it.findUnique()
                 }
@@ -238,8 +326,8 @@ class BoxStoreHandler(model: Model) {
         return null
     }
 
-    fun identityForSeriesUrl(url: String): SeriesIdentity {
-        val wcoLink = linkForSeriesUrl(url)
+    fun identityForSeriesSlug(slug: String): SeriesIdentity {
+        val wcoLink = categoryLinkForSeriesSlug(slug)
         if (wcoLink != null) {
             return SeriesIdentity.idForType(wcoLink.type)
         }

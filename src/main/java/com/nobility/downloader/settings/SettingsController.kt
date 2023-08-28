@@ -1,6 +1,7 @@
 package com.nobility.downloader.settings
 
 import com.nobility.downloader.Model
+import com.nobility.downloader.driver.DriverDefaults
 import com.nobility.downloader.series.SeriesScraper
 import com.nobility.downloader.utils.Tools.bytesToMB
 import javafx.beans.value.ObservableValue
@@ -38,6 +39,9 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     private lateinit var buttonClearHistory: Button
 
     @FXML
+    private lateinit var buttonUpdateUrl: Button
+
+    @FXML
     private lateinit var viewScrapedDataButton: Button
 
     @FXML
@@ -71,6 +75,9 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     private lateinit var choiceBrowser: ChoiceBox<String>
 
     @FXML
+    private lateinit var choiceQuality: ChoiceBox<String>
+
+    @FXML
     private lateinit var toastSlider: Slider
 
     @FXML
@@ -82,6 +89,12 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     @FXML
     private lateinit var cbBypassDiskSpaceCheck: CheckBox
 
+    @FXML
+    private lateinit var fieldDomain: TextField
+
+    @FXML
+    private lateinit var fieldExtension: TextField
+
     fun executeStartCommand(command: Int) {
         if (command > -1) {
             when (command) {
@@ -92,10 +105,31 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     }
 
     override fun initialize(location: URL, resources: ResourceBundle?) {
+        updateWcoButtonn.isDisable = true
         toastSlider.value = model.settings().doubleSetting(Defaults.TOASTTRANSPARENCY)
         toastSlider.valueProperty().addListener { _: ObservableValue<out Number>?, _: Number, _: Number ->
             buttonSaveSettings.isDisable = !settingsChanged()
         }
+        fieldDomain.text = model.settings().stringSetting(Defaults.DOMAIN)
+        fieldDomain.textProperty()
+            .addListener { _: ObservableValue<out String>?, oldValue: String, newValue: String ->
+                handleTextField(
+                    fieldDomain,
+                    oldValue,
+                    newValue,
+                    false
+                )
+            }
+        fieldExtension.text = model.settings().stringSetting(Defaults.EXTENSION)
+        fieldExtension.textProperty()
+            .addListener { _: ObservableValue<out String>?, oldValue: String, newValue: String ->
+                handleTextField(
+                    fieldExtension,
+                    oldValue,
+                    newValue,
+                    false
+                )
+            }
         fieldDownloadThreads.text = model.settings().integerSetting(Defaults.DOWNLOADTHREADS).toString()
         fieldProxy.text = model.settings().stringSetting(Defaults.PROXY)
         fieldTimeout.text = model.settings().integerSetting(Defaults.TIMEOUT).toString()
@@ -164,6 +198,14 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             .addListener { _: ObservableValue<out String>?, _: String?, _: String? ->
                 buttonSaveSettings.isDisable = !settingsChanged()
             }
+        choiceQuality.items.addAll(
+            Quality.values().map { it.tag }
+        )
+        choiceQuality.value = model.settings().stringSetting(Defaults.QUALITY)
+        choiceQuality.selectionModel.selectedItemProperty()
+            .addListener { _: ObservableValue<out String>?, _: String?, _: String? ->
+                buttonSaveSettings.isDisable = !settingsChanged()
+            }
         stage.onCloseRequest = EventHandler {
             if (settingsChanged()) {
                 model.showConfirm("You have unsaved changes. Would you like to save your settings?", {
@@ -182,6 +224,29 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
     @FXML
     fun handleClicks(event: ActionEvent) {
         when (event.source) {
+            buttonUpdateUrl -> {
+                model.taskScope.launch {
+                    val oldDomain = model.settings().stringSetting(Defaults.DOMAIN)
+                    val oldExtension = model.settings().stringSetting(Defaults.EXTENSION)
+                    model.updateWcoUrl()
+                    withContext(Dispatchers.JavaFx) {
+                        var updated = false
+                        val newDomain = model.settings().stringSetting(Defaults.DOMAIN)
+                        val newExtension = model.settings().stringSetting(Defaults.EXTENSION)
+                        if (oldDomain != newDomain) {
+                            fieldDomain.text = model.settings().stringSetting(Defaults.DOMAIN)
+                            updated = true
+                        }
+                        if (oldExtension != newExtension) {
+                            fieldExtension.text = model.settings().stringSetting(Defaults.EXTENSION)
+                            updated = true
+                        }
+                        if (updated) {
+                            model.toast("Successfully Updated Domain", stage)
+                        }
+                    }
+                }
+            }
             buttonClearHistory -> {
                 if (model.settings().seriesBox.isEmpty) {
                     return
@@ -189,7 +254,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                 model.showConfirm("Would you like to clear all your series history?") {
                     val size = model.settings().seriesBox.all.size
                     model.settings().seriesBox.removeAll()
-                    model.toast("Cleared $size series history(s) from your settings.", stage)
+                    model.toast("Cleared $size series history from your settings.", stage)
                 }
             }
 
@@ -206,7 +271,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     val size = model.settings().downloadBox.all.size
                     model.settings().downloadBox.removeAll()
                     model.tableView.items.clear()
-                    model.toast("Cleared $size downloads from your settings.", stage)
+                    model.toast("Cleared $size download(s) from your settings.", stage)
                 }
             }
 
@@ -230,6 +295,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
 
             checkHistoryForEpisodesButton -> {
                 if (!model.settings().seriesBox.isEmpty) {
+
                     model.downloadNewEpisodesForSeries(model.settings().seriesBox.all)
                     model.showMessage(content = "Launched downloader for all series history.")
                 } else {
@@ -262,13 +328,14 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     )
                     return
                 }
-                if (model.settings().wcoHandler.seriesBox.all.size < 1000) {
-                    model.toast(
-                        "Please download the wco db from github before starting this process. " +
-                                "This is to ensure that only the needed series are scraped.",
-                        stage
-                    )
-                    return
+                if (!model.developerMode) {
+                    if (model.settings().wcoHandler.seriesBox.all.size < 1000) {
+                        model.showError(
+                            "Please download the wco db from github before starting this process. " +
+                                    "This is to ensure that only the needed series are scraped.",
+                        )
+                        return
+                    }
                 }
                 model.showConfirm(
                     "Do you really want to update the wco db? " +
@@ -278,11 +345,11 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     model.taskScope.launch {
                         seriesScraper.updateWcoDb()
                     }
-                    model.toast(
+                    model.showMessage(
+                        "WcoDownloader Started",
                         "The updater has been launched. " +
                                 "This will prevent the downloader from running. " +
-                                "Please keep an eye out for the consoles messages.",
-                        stage
+                                "Please keep an eye out for the consoles messages."
                     )
                 }
             }
@@ -401,7 +468,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                     model.showError(
                         "Unable to connect to proxy",
                         """
-                            Proxy is not able to reach the target ${Model.WEBSITE}
+                            Proxy is not able to reach the target ${model.wcoUrl}
                             Read the console to see the error.
                             """.trimIndent()
                     )
@@ -428,15 +495,25 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                 return false
             }
         }
+        if (fieldDomain.text.isEmpty()) {
+            fieldDomain.text = "wcofun.com"
+        }
+        if (fieldExtension.text.isEmpty()) {
+            fieldExtension.text = "org"
+        }
         model.settings().setSetting(Defaults.DOWNLOADTHREADS, threads)
         model.settings().setSetting(Defaults.PROXY, fieldProxy.text)
         model.settings().setSetting(Defaults.TIMEOUT, proxyTimeout)
         model.settings().setSetting(Defaults.SAVEFOLDER, fieldDownloadFolder.text)
         model.settings().setSetting(Defaults.SHOWCONTEXTONCLICK, cbShowContext.isSelected)
         model.settings().setSetting(Defaults.DRIVER, choiceBrowser.value)
+        model.settings().setSetting(Defaults.QUALITY, choiceQuality.value)
         model.settings().setSetting(Defaults.ENABLEPROXY, cbEnableProxy.isSelected)
         model.settings().setSetting(Defaults.TOASTTRANSPARENCY, toastSlider.value)
-        model.toast("Settings successfully saved.", stage)
+        model.settings().setSetting(Defaults.DOMAIN, fieldDomain.text)
+        model.settings().setSetting(Defaults.EXTENSION, fieldExtension.text)
+        model.settings().setSetting(Defaults.DEBUGMESSAGES, cbDebug.isSelected)
+        model.toast("Settings successfully saved", stage)
         buttonSaveSettings.isDisable = true
         return true
     }
@@ -454,9 +531,12 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
                 || model.settings().booleanSetting(Defaults.ENABLEPROXY) != cbEnableProxy.isSelected
                 || model.settings().integerSetting(Defaults.TIMEOUT).toString() != fieldTimeout.text
                 || model.settings().stringSetting(Defaults.DRIVER) != choiceBrowser.value
+                || model.settings().stringSetting(Defaults.QUALITY) != choiceQuality.value
                 || model.settings().doubleSetting(Defaults.TOASTTRANSPARENCY) != toastSlider.value
                 || model.settings().booleanSetting(Defaults.BYPASSFREESPACECHECK) != cbBypassDiskSpaceCheck.isSelected
                 || model.settings().booleanSetting(Defaults.DEBUGMESSAGES) != cbDebug.isSelected
+                || model.settings().stringSetting(Defaults.DOMAIN) != fieldDomain.text
+                || model.settings().stringSetting(Defaults.EXTENSION) != fieldExtension.text
     }
 
     /**
@@ -520,7 +600,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
             return@withContext -1
         }
         return@withContext try {
-            val response = Jsoup.connect(Model.WEBSITE)
+            val response = Jsoup.connect(model.wcoUrl)
                 .timeout(model.settings().integerSetting(Defaults.TIMEOUT) * 1000)
                 .proxy(ip, port)
                 .execute()

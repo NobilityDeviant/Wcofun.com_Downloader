@@ -1,16 +1,16 @@
 package com.nobility.downloader.series
 
-import com.nobility.downloader.DriverBase
+import com.nobility.downloader.Main
 import com.nobility.downloader.Model
+import com.nobility.downloader.driver.DriverBase
 import com.nobility.downloader.entities.Episode
 import com.nobility.downloader.entities.Series
 import com.nobility.downloader.scraper.BuddyHandler
-import com.nobility.downloader.scraper.LinkHandler
+import com.nobility.downloader.scraper.SlugHandler
 import com.nobility.downloader.settings.Defaults
 import com.nobility.downloader.utils.Option
 import com.nobility.downloader.utils.Resource
 import com.nobility.downloader.utils.Tools
-import com.nobility.downloader.utils.Tools.loadImageFromURL
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -28,14 +28,18 @@ import javafx.stage.Stage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
 import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
+import javax.imageio.ImageIO
 
 class SeriesDetailsController : DriverBase(), Initializable {
 
     private val taskScope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var stage: Stage
+    private lateinit var seriesSlug: String
     private lateinit var seriesLink: String
     private lateinit var series: Series
     private var updating = false
@@ -64,23 +68,24 @@ class SeriesDetailsController : DriverBase(), Initializable {
     @FXML
     private lateinit var episodesLabel: Label
 
-    fun setup(model: Model, stage: Stage, seriesLink: String) {
+    fun setup(model: Model, stage: Stage, seriesSlug: String) {
         this.model = model
         this.stage = stage
-        this.seriesLink = seriesLink
+        this.seriesSlug = seriesSlug
+        this.seriesLink = model.linkForSlug(seriesSlug)
         episodesTable.setRowFactory {
             val row = TableRow<Episode>()
             val menu = ContextMenu()
             row.emptyProperty()
                 .addListener { _: ObservableValue<out Boolean?>?, _: Boolean?, isEmpty: Boolean? ->
                     if (!isEmpty!!) {
-                        val history = row.item
+                        val episode = row.item
                         val openLink =
                             MenuItem("Open Episode Link")
                         openLink.onAction =
                             EventHandler {
                                 model.showLinkPrompt(
-                                    history.link,
+                                    model.linkForSlug(episode.slug),
                                     true
                                 )
                             }
@@ -89,7 +94,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
                         copyLink.onAction =
                             EventHandler {
                                 model.showCopyPrompt(
-                                    history.link,
+                                    model.linkForSlug(episode.slug),
                                     false,
                                     stage
                                 )
@@ -119,27 +124,16 @@ class SeriesDetailsController : DriverBase(), Initializable {
             SimpleStringProperty(it.value.name)
         }
         episodesTable.sortOrder.add(nameColumn)
-        episodesTable.placeholder = Label("No episodes found for this series")
+        episodesTable.placeholder = Label("No episodes found for this series.")
         nameColumn.comparator = Tools.mainEpisodesComparator
-        image.fitHeight = stage.height / 3
-        stage.heightProperty().addListener { _, _, _ ->
-            run {
-                image.fitHeight = stage.height / 3
-            }
-        }
-        stage.widthProperty().addListener { _, _, _ ->
-            run {
-                image.fitWidth = stage.width
-            }
-        }
         stage.onCloseRequest = EventHandler {
             killDriver()
             taskScope.cancel()
             stage.close()
         }
-        var series = model.settings().seriesForLink(seriesLink)
-        if (series == null) {
-            series = model.settings().wcoHandler.seriesForLink(seriesLink)
+        var series = model.settings().seriesForSlug(seriesSlug)
+        if (series == null || series.episodes.isEmpty()) {
+            series = model.settings().wcoHandler.seriesForSlug(seriesSlug)
         }
         if (series != null && series.hasImageAndDescription()) {
             taskScope.launch {
@@ -174,7 +168,8 @@ class SeriesDetailsController : DriverBase(), Initializable {
             title.text = series.name
             desc.text = series.description
             if (series.genres != null) {
-                for (genre in series.genres) {
+                genresHbox.children.clear()
+                for (genre in series.genres.distinctBy { it.name }) {
                     val button = Button()
                     button.text = genre.name
                     button.textAlignment = TextAlignment.CENTER
@@ -182,7 +177,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
                     button.prefWidth = 120.0
                     button.tooltip = Tooltip(genre.name)
                     button.setOnAction {
-                        model.showLinkPrompt(genre.link, true)
+                        model.showLinkPrompt(model.linkForSlug(genre.slug), true)
                     }
                     genresHbox.children.add(button)
                     HBox.setMargin(
@@ -199,6 +194,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
                 genresTitle.isVisible = false
                 genresHbox.isVisible = false
             }
+            episodesTable.items.clear()
             episodesLabel.text = "Episodes (${series.episodes.size})"
             episodesTable.items.addAll(
                 FXCollections.observableArrayList(series.episodes)
@@ -211,9 +207,9 @@ class SeriesDetailsController : DriverBase(), Initializable {
     override fun initialize(location: URL, resources: ResourceBundle?) {}
 
     private suspend fun loadSeries(): Resource<Boolean> = withContext(Dispatchers.IO) {
-        val linkHandler = LinkHandler(model)
+        val slugHandler = SlugHandler(model)
         try {
-            val result = linkHandler.handleLink(seriesLink, true)
+            val result = slugHandler.handleSlug(seriesSlug, true)
             if (result.data is Series) {
                 model.settings().addOrUpdateSeries(result.data)
                 model.settings().wcoHandler.addOrUpdateSeries(result.data)
@@ -225,7 +221,7 @@ class SeriesDetailsController : DriverBase(), Initializable {
         } catch (e: Exception) {
             return@withContext Resource.Error("Failed to load series. Error: ${e.localizedMessage}")
         } finally {
-            linkHandler.killDriver()
+            slugHandler.killDriver()
         }
     }
 
@@ -258,19 +254,20 @@ class SeriesDetailsController : DriverBase(), Initializable {
         taskScope.launch {
             val buddyHandler = BuddyHandler(model)
             val result = buddyHandler.updateSeriesDetails(series)
-            buddyHandler.taskScope.cancel()
+            buddyHandler.cancel()
             if (result.data != null) {
                 withContext(Dispatchers.JavaFx) {
                     series.update(result.data)
                     updateUI(series)
-                    model.showMessage(
-                        "Success",
-                        "Successfully updated details for: ${series.name}."
-                    )
+                    model.toast("Successfully updated series: ${series.name}.", stage)
                 }
             } else {
                 withContext(Dispatchers.JavaFx) {
-                    model.showError("Failed to update details for ${series.name}. Error: ${result.message}")
+                    if (result.message != "Series is already updated.") {
+                        model.showError("Failed to update details for ${series.name}. Error: ${result.message}")
+                    } else {
+                        model.toast("Series is already up to date.", stage)
+                    }
                 }
             }
             updating = false
@@ -295,19 +292,69 @@ class SeriesDetailsController : DriverBase(), Initializable {
 
     private fun loadSeriesImage(series: Series) {
         try {
-            val file = File(  model.settings().wcoHandler.seriesImagesPath +
+            val file = File(
+                model.settings().wcoHandler.seriesImagesPath +
                     Tools.titleForImages(series.name))
             if (file.exists()) {
                 image.image = Image(
                     file.inputStream()
                 )
+                val bufferedImage = ImageIO.read(file)
+                image.fitWidth = bufferedImage.width.toDouble()
             } else {
                 throw Exception("")
             }
         } catch (_: Exception) {
             taskScope.launch {
                 model.settings().wcoHandler.downloadSeriesImage(series)
-                loadImageFromURL(model, series.imageLink, image)
+                loadImageFromURL(series.imageLink)
+            }
+        }
+    }
+
+    private suspend fun loadImageFromURL(imageLink: String) {
+        try {
+            val con = URL(imageLink).openConnection() as HttpURLConnection
+            con.setRequestProperty("user-agent", model.randomUserAgent)
+            con.readTimeout = 10000
+            con.connectTimeout = 10000
+            con.connect()
+            withContext(Dispatchers.JavaFx) {
+                try {
+                    val bufferedImage = ImageIO.read(con.inputStream)
+                    image.fitWidth = bufferedImage.width.toDouble()
+                    image.image = Image(con.inputStream)
+                    image.setOnMouseClicked {
+                        model.showLinkPrompt(
+                            imageLink,
+                            "Would you like to open this image in your default browser?",
+                            true
+                        )
+                    }
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    System.err.println(
+                        "Failed to load series image for: " +
+                                "${series.name} Error: ${e.localizedMessage}"
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            System.err.println(
+                "Failed to load series image for: " +
+                        "${series.name} Error: ${e.localizedMessage}"
+            )
+            withContext(Dispatchers.JavaFx) {
+                val icon = Main::class.java.getResourceAsStream(Model.NO_IMAGE_ICON)
+                if (icon != null) {
+                    image.image = Image(icon)
+                    stage.widthProperty().addListener { _, _, _ ->
+                        run {
+                            image.fitWidth = stage.width
+                        }
+                    }
+                }
             }
         }
     }

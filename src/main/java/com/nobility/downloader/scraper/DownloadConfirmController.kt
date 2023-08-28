@@ -24,6 +24,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
+import javax.imageio.ImageIO
 
 class DownloadConfirmController(
     private val model: Model,
@@ -72,7 +73,6 @@ class DownloadConfirmController(
         nameColumn.setCellValueFactory {
             SimpleStringProperty(it.value.episode.name)
         }
-
         selectColumn.setCellValueFactory {
             val checkBox = CheckBox()
             checkBox.alignment = Pos.CENTER
@@ -91,17 +91,6 @@ class DownloadConfirmController(
         episodesTable.sortOrder.add(nameColumn)
         episodesTable.placeholder = Label("No episodes found for this series")
         nameColumn.comparator = Tools.mainEpisodesComparator
-        image.fitHeight = stage.height / 3
-        stage.heightProperty().addListener { _, _, _ ->
-            run {
-                image.fitHeight = stage.height / 3
-            }
-        }
-        stage.widthProperty().addListener { _, _, _ ->
-            run {
-                image.fitWidth = stage.width
-            }
-        }
         loadSeriesImage()
         title.text = series.name
         desc.text = series.description
@@ -198,19 +187,16 @@ class DownloadConfirmController(
                     }
                 }
                 episodesTable.refresh()
-                val seriesHistory = model.settings().seriesForLink(series.link)
-                val seriesWco = model.settings().wcoHandler.seriesForLink(series.link)
+                val seriesHistory = model.settings().seriesForSlug(series.slug)
+                val seriesWco = model.settings().wcoHandler.seriesForSlug(series.slug)
+                val updatedEpisodes = result.data.updatedEpisodes
                 if (seriesHistory != null) {
-                    seriesHistory.episodes.clear()
-                    seriesHistory.episodes.addAll(result.data.episodes)
-                    seriesHistory.episodes.applyChangesToDb()
+                    seriesHistory.updateEpisodes(updatedEpisodes, true)
                 }
                 if (seriesWco != null) {
-                    seriesWco.episodes.clear()
-                    seriesWco.episodes.addAll(result.data.episodes)
-                    seriesWco.episodes.applyChangesToDb()
+                    seriesWco.updateEpisodes(updatedEpisodes, true)
                 }
-                buddyHandler.taskScope.cancel()
+                buddyHandler.cancel()
                 withContext(Dispatchers.JavaFx) {
                     downloadButton.isDisable = false
                     checkButton.isDisable = false
@@ -223,10 +209,7 @@ class DownloadConfirmController(
                 withContext(Dispatchers.JavaFx) {
                     downloadButton.isDisable = false
                     checkButton.isDisable = false
-                    model.showMessage(
-                        "Up to date!",
-                        "This series is up to date. No new episodes have been found.",
-                    )
+                    model.toast("No new episodes found.", stage)
                 }
             }
         }
@@ -277,14 +260,18 @@ class DownloadConfirmController(
 
     private fun loadSeriesImage() {
         try {
-            val file = File(  model.settings().wcoHandler.seriesImagesPath +
-                    Tools.titleForImages(series.name))
+            val file = File(
+                model.settings().wcoHandler.seriesImagesPath +
+                        Tools.titleForImages(series.name)
+            )
             if (file.exists()) {
                 image.image = Image(
                     file.inputStream()
                 )
+                val bufferedImage = ImageIO.read(file)
+                image.fitWidth = bufferedImage.width.toDouble()
             } else {
-                throw Exception("")
+                throw Exception()
             }
         } catch (_: Exception) {
             ioScope.launch {
@@ -302,8 +289,10 @@ class DownloadConfirmController(
             con.connect()
             withContext(Dispatchers.JavaFx) {
                 try {
-                    this@DownloadConfirmController.image.image = Image(con.inputStream)
-                    this@DownloadConfirmController.image.setOnMouseClicked {
+                    val bufferedImage = ImageIO.read(con.inputStream)
+                    image.fitWidth = bufferedImage.width.toDouble()
+                    image.image = Image(con.inputStream)
+                    image.setOnMouseClicked {
                         model.showLinkPrompt(
                             imageLink,
                             "Would you like to open this image in your default browser?",
@@ -313,19 +302,24 @@ class DownloadConfirmController(
                 } catch (e: IOException) {
                     System.err.println(
                         "Failed to load series image for: " +
-                                "${series.link} Error: ${e.localizedMessage}"
+                                "${series.name} Error: ${e.localizedMessage}"
                     )
                 }
             }
         } catch (e: Exception) {
             System.err.println(
                 "Failed to load series image for: " +
-                        "${series.link} Error: ${e.localizedMessage}"
+                        "${series.name} Error: ${e.localizedMessage}"
             )
             withContext(Dispatchers.JavaFx) {
                 val icon = Main::class.java.getResourceAsStream(Model.NO_IMAGE_ICON)
                 if (icon != null) {
                     image.image = Image(icon)
+                    stage.widthProperty().addListener { _, _, _ ->
+                        run {
+                            image.fitWidth = stage.width
+                        }
+                    }
                 }
             }
         }
