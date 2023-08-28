@@ -1,8 +1,8 @@
-# Wcofun.net Downloader
+# Wcofun.com Downloader
 
-The project name is a little misleading. The original website seems to change all the time, but it's too late to change it.
+The project name can be a little misleading. The original website seems to change all the time, but it's too late to change it.
 
-This program is used to download videos and series from https://www.wcofun.net/
+This program is used to download videos and series from https://www.wcofun.com/
 
 If you check that website out, it's one of the best video sites for free cartoons and anime.
 
@@ -75,7 +75,7 @@ I manually downloaded so many videos from wco that I decided to create this bad 
 This downloader is multi-threaded, customizable, resizeable, fast and easy to use!
 It also utilizes Kotlin's coroutines for a fast and smooth experience.
 
-You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.net/anime/to-love-ru
+You just type a link to a series or an episode such as one of my favorites: https://www.wcofun.com/anime/to-love-ru
 inside the textfield and hit ENTER or press Start
 
 # Downloads
