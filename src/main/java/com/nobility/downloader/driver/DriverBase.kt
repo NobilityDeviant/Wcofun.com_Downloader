@@ -95,7 +95,10 @@ abstract class DriverBase {
                 ChromeDriver(chromeOptions)
             }
         } else if (driverDefaults == DriverDefaults.FIREFOX) {
-            firefoxOptions.setHeadless(headless)
+            //firefoxOptions.setHeadless(headless)
+            if (headless) {
+                firefoxOptions.addArguments("-headless")
+            }
             val profile = FirefoxProfile()
             profile.setPreference("media.volume_scale", "0.0")
             profile.setPreference("general.useragent.override", userAgent)
@@ -109,7 +112,7 @@ abstract class DriverBase {
                 firefoxOptions.setProxy(proxy)
             }
             firefoxOptions.profile = profile
-            firefoxOptions.setPageLoadStrategy(PageLoadStrategy.EAGER)
+            //firefoxOptions.setPageLoadStrategy(PageLoadStrategy.NORMAL)
             _driver = FirefoxDriver(firefoxOptions)
         } else if (driverDefaults == DriverDefaults.SAFARI) {
             //not sure if user agent is changable

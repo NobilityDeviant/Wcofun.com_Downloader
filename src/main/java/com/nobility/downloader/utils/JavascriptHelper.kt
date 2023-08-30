@@ -22,6 +22,12 @@ object JavascriptHelper {
         return directUrlChanger.replace(RES_KEY, newUrl)
     }
 
+    fun advancedChangeUrl(
+        newUrl: String
+    ): String {
+        return advancedDirectUrlChanger.replace(RES_KEY, newUrl)
+    }
+
     /**
      * Get all video links using an edited version of a function found inside
      * the video frames source code.
@@ -38,5 +44,14 @@ object JavascriptHelper {
             "});"
 
     private const val directUrlChanger = "location.href = '$RES_KEY'"
+
+    private const val advancedDirectUrlChanger = "window.goToThis = function(url) {\n" +
+            "    var link = document.createElement(\"a\");\n" +
+            "    link.setAttribute(\"href\", url);\n" +
+            "    link.style.display = \"none\";\n" +
+            "    document.body.appendChild(link);\n" +
+            "    link.click();\n" +
+            "}\n" +
+            "goToThis('$RES_KEY');"
 
 }

@@ -25,7 +25,7 @@ jar {
     }
     manifest {
         attributes (
-                    "Manifest-Version": "2.0",
+                    "Manifest-Version": "2.0.1",
                     "Main-Class": "com.nobility.downloader.Main"
                 )
     }
@@ -38,7 +38,7 @@ jar {
 }
 
 group 'com.nobility'
-version '2.0'
+version '2.0.1'
 
 repositories {
     mavenCentral()
@@ -46,9 +46,9 @@ repositories {
 
 dependencies {
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.3'
-    implementation 'org.seleniumhq.selenium:selenium-java:4.8.3'
+    implementation 'org.seleniumhq.selenium:selenium-java:4.11.0'
     //ignore this warning
-    implementation 'io.github.bonigarcia:webdrivermanager:5.3.2'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.5.2'
     implementation 'org.slf4j:slf4j-api:2.0.4'
     implementation 'org.slf4j:slf4j-simple:2.0.4'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'

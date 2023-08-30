@@ -77,13 +77,20 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                         model.debugErr("Failed to find frame for resolution check. Retrying...")
                         continue
                     } else if (errorCode == ErrorCode.IFRAME_FORBIDDEN) {
-                        resRetries++
-                        model.decrementDownloadsInProgress()
-                        model.debugErr("Failed to visit iframe for resolution check. Retrying...")
+                        resRetries = 3
+                        model.debugErr(
+                            "Failed to find video frame for: $slug" +
+                                    "\nPlease report this in github issues with the browser used and the video you are trying to download."
+                        )
                         continue
                     } else if (errorCode == ErrorCode.FAILED_EXTRACT_RES) {
                         resRetries = 3
-                        model.debugErr("Failed to extract resolution. Using original method.")
+                        model.debugErr("Failed to extract resolution links.")
+                    } else if (errorCode == ErrorCode.NO_JS) {
+                        resRetries = 3
+                        println(
+                            "This browser doesn't support JavascriptExecutor."
+                        )
                     }
                 }
                 if (result.data != null) {
@@ -97,7 +104,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                         }
                     }
                 } else {
-                    model.debugNote("Failed to find resolution download links, defaulting to LOW.")
+                    model.debugNote("Failed to find resolution download links, defaulting to ${Quality.LOW.tag} quality.")
                     qualityOption = Quality.LOW
                 }
             }
@@ -319,6 +326,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 if (saveFile.exists() && saveFile.length() >= originalFileSize) {
                     model.incrementDownloadsFinished()
                     println("Successfully downloaded: $episodeName")
+                    model.debugNote("Successfully downloaded: $episodeName")
                     currentEpisode = null
                 }
             } catch (e: IOException) {
@@ -343,7 +351,8 @@ class VideoDownloader(model: Model) : DriverBase(model) {
     private enum class ErrorCode(val code: Int) {
         NO_FRAME(0),
         IFRAME_FORBIDDEN(1),
-        FAILED_EXTRACT_RES(2);
+        FAILED_EXTRACT_RES(2),
+        NO_JS(3);
 
         companion object {
             fun errorCodeForCode(code: Int?): ErrorCode? {
@@ -364,7 +373,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
         slug: String
     ): Resource<List<QualityAndDownload>> {
         if (driver !is JavascriptExecutor) {
-            return Resource.Error("This driver doesn't support JavascriptExecutor.")
+            return Resource.ErrorCode(ErrorCode.NO_JS.code)
         }
         val fullLink = model.linkForSlug(slug)
         println("Scraping resolution links from $fullLink")
@@ -378,6 +387,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
         var flag = 0
         while (flag < 2) {
             try {
+                model.debugNote("Trying to find frame for resolution with flag: $flag")
                 wait.pollingEvery(Duration.ofSeconds(1))
                     .withTimeout(Duration.ofSeconds(10))
                     .until(
@@ -401,15 +411,14 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                     )
                 )
                 val frameLink = frame.getAttribute("src")
+                model.debugNote("Found frame for resolution with flag: $flag and link: $frameLink")
                 if (!frameLink.isNullOrEmpty()) {
-                    //must redirect like this or else we get forbidden
-                    js.executeScript(JavascriptHelper.changeUrl(frameLink))
+                    model.debugNote("Executing resolution javascript function.")
+                    //must redirect like this or else we get forbidden (
+                    js.executeScript(JavascriptHelper.advancedChangeUrl(frameLink))
+                    model.debugNote("Javascript executed. Waiting 5 seconds for page change.")
+                    delay(5000)
                     if (driver.pageSource.contains("403 Forbidden")) {
-                        println(
-                            "Failed to find video frame for: $slug" +
-                                    "\nPlease report this in github issues." +
-                                    "\nRetrying with original method..."
-                        )
                         return Resource.ErrorCode(ErrorCode.IFRAME_FORBIDDEN.code)
                     } else {
                         foundVideoFrame = true
@@ -420,6 +429,7 @@ class VideoDownloader(model: Model) : DriverBase(model) {
                 e.printStackTrace()
                 model.debugErr("Failed to find flag $flag for $slug. Trying next one.", e)
                 flag++
+                continue
             }
         }
         if (!foundVideoFrame) {
