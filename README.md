@@ -1,4 +1,4 @@
-# Wcofun.com Downloader
+# Wcofun Downloader
 
 The project name can be a little misleading. The original website seems to change all the time, but it's too late to change it.
 
@@ -29,7 +29,7 @@ If you don't want to sign up for anything, you can use Liberica instead: https:/
 Make sure you choose the Full JRE or Full JDK for development:
 > Anything else doesn't include Java FX.
 
-![Alt text](images/liberica.png?raw=true "Liberica")
+![Liberica](images/liberica.png?raw=true "Liberica")
 
 If you're editing the program you will need an IDE.
 
@@ -67,7 +67,7 @@ You can usually hold shift and right click inside the folder where the jar is to
 
 # Home
 
-![Alt text](images/home.png?raw=true "Home Tab")
+![Home Tab](images/home.png?raw=true "Home Tab")
 
 A lot of work was put into this one!
 I manually downloaded so many videos from wco that I decided to create this bad boy.
@@ -82,7 +82,7 @@ inside the textfield and hit ENTER or press Start
 
 All past and current downloads will go inside this organized tab here:
 
-![Alt text](images/downloads.png?raw=true "Download Tab")
+![Download Tab](images/downloads.png?raw=true "Download Tab")
 
 You can interact with the downloads by right clicking any entry.
 
@@ -91,7 +91,7 @@ Just select the main download folder in the settings. The default one is your ho
 
 # Settings
 
-![Alt text](images/settings.png?raw=true "Settings Window")
+![Settings Window](images/settings.png?raw=true "Settings Window")
 
 You can now choose the browser you want to use with selenium.
 Be sure to select it before downloading anything. You must have the chosen browser installed.
@@ -99,20 +99,20 @@ You can adjust your settings by going to Settings > Open Settings in the menu ba
 
 # Series Details
 
-![Alt text](images/seriesdetails.png?raw=true "Series Details WIndow")
+![Series Details Window](images/seriesdetails.png?raw=true "Series Details WIndow")
 
 With the new cache system, you don't even need to visit wco to check out a series details!
 
 # Download Confirm
 
-![Alt text](images/downloadconfirm.png?raw=true "Download Confirm Window")
+![Download Confirm WIndow](images/downloadconfirm.png?raw=true "Download Confirm Window")
 
 You are now able to select all the episodes inside a series you want to download!
 It feels so much better than the max episodes option.
 
 # WCO Database
 
-![Alt text](images/wco.png?raw=true "WCO Window")
+![Wco Database Window](images/wco.png?raw=true "Wco Database Window")
 
 Now as an optional download, you can view ALL the series inside wcofun all from this simple window.
 It has the same categories (minus OVA because it's just in dubbed/subbed) and is so much easier to use.
@@ -121,7 +121,7 @@ Why doesn't wco have images next to their links? IDK but that's why I created th
 
 # Recent
 
-![Alt text](images/recent.png?raw=true "Recent Window")
+![Recent WIndow](images/recent.png?raw=true "Recent Window")
 
 Now inside the wco window, you can view the latest episodes and series displayed on the wco home page.
 Just as a little QoL feature.
@@ -130,17 +130,27 @@ Right click any entry to see the options.
 NOTE: This window isn't very optimized. It can be quite slow due to the big amount of data.
 I suggest not using the columns to sort and only use the search bar. :)
 
-Maybe one day I'll use Compose for the UI.
+Maybe one day I'll use Compose for the UI. (working on it, kind of)
 
 Enjoy and have fun!
-
-Known Issue: This program does not support downloading 2 videos from one page.
-Idk why this website has them, but it's best to ignore them for now.
 
 # Donate
 
 Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
+Thank you for the consideration.
 
-#Removed. Will keep this off for now.
+## PayPal:
 
+[![PayPal Donate](images/paypal.png?raw=true "Paypal Donate")](https://www.paypal.com/donate/?business=M437F4ZLECMJG&no_recurring=0&item_name=Like+my+programs+or+contributions?+You+can+help+me+out+with+a+donation+in+any+amount.+Thank+you+for+considering%21+%F0%9F%91%8D%0A&currency_code=USD)
 
+## Cashapp:
+
+**$nobilitydev**
+
+## LTC:
+
+**LSoTLAvD7LtEXv3hUfojis4JyTRUb2LczB**
+
+## ETH:
+
+**0x2476dC02c0B096cF96F09594d1879c2f8Dc1b977**
