@@ -116,7 +116,9 @@ class Model {
             return false
         }
         if (!store.booleanSetting(Defaults.BYPASSFREESPACECHECK)) {
-            val usableSpace = downloadFolder.usableSpace
+            val root = downloadFolder.toPath().root
+            val usableSpace = root.toFile().usableSpace
+            //println("Found ${Tools.bytesToMB(usableSpace)}MBs in root.")
             if (usableSpace != 0L) {
                 if (Tools.bytesToMB(usableSpace) < 150) {
                     showError(
@@ -128,7 +130,7 @@ class Model {
                     return false
                 }
             } else {
-                val freeSpace = downloadFolder.freeSpace
+                val freeSpace = root.toFile().freeSpace
                 if (freeSpace != 0L) {
                     if (Tools.bytesToMB(freeSpace) < 150) {
                         showError(

@@ -232,7 +232,7 @@ class UpdateController(
                         alert.headerText = "Please excuse this tedious update process. (-_-)/"
                         alert.contentText = """
                 The new client has been downloaded. It can be found in your User folder. 
-                Please copy it into the main folder.
+                Please move it into the project folder to replace the current jar.
                 Path: ${downloadedClient.absolutePath}
                 Close this window to shutdown and open the folder.
                 """.trimIndent()

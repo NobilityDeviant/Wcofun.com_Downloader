@@ -6,12 +6,24 @@ import com.nobility.downloader.driver.DriverBase
 import com.nobility.downloader.entities.CategoryLink
 import com.nobility.downloader.scraper.IdentityScraper
 import com.nobility.downloader.scraper.SlugHandler
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 
 class SeriesScraper(model: Model) : DriverBase(model) {
+
+    suspend fun updateWcoDbImages() = withContext(Dispatchers.IO) {
+        val threads = 5
+        val series = model.settings().wcoHandler.seriesBox.all
+        val split = Lists.partition(series, series.size / threads)
+        val jobs = mutableListOf<Job>()
+        split.forEach {
+            jobs.add(launch {
+                it.forEach {
+                    model.settings().wcoHandler.downloadSeriesImage(it)
+                }
+            })
+        }
+        jobs.joinAll()
+    }
 
     suspend fun updateWcoDb() = withContext(Dispatchers.IO) {
         val identityLinkScraper = IdentityScraper(model)

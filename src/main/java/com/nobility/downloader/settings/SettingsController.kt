@@ -513,6 +513,7 @@ class SettingsController(private val model: Model, private val stage: Stage) : I
         model.settings().setSetting(Defaults.DOMAIN, fieldDomain.text)
         model.settings().setSetting(Defaults.EXTENSION, fieldExtension.text)
         model.settings().setSetting(Defaults.DEBUGMESSAGES, cbDebug.isSelected)
+        model.settings().setSetting(Defaults.BYPASSFREESPACECHECK, cbBypassDiskSpaceCheck.isSelected)
         model.toast("Settings successfully saved", stage)
         buttonSaveSettings.isDisable = true
         return true
