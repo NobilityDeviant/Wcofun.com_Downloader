@@ -8,9 +8,9 @@ If you check that website out, it's one of the best video sites for free cartoon
 
 First off, are you wondering if this website is illegal? Yes it sure is.
 
-The thing is you won't get in trouble for using it or downloading from it. It is not like torrents because no one can track you, so don't worry.
+The thing is you won't get in trouble for using it or downloading from it. It is not like torrents because no one can track you so don't worry.
 
-Some countries do block it though. If you can't access the website then use a VPN of your choice before downloading anything.
+Some countries do block it though. If you can't access the website, then use a VPN of your choice before downloading anything.
 
 I suggest https://protonvpn.com because it is free and fast.
 
@@ -40,7 +40,7 @@ You will also need a browser of your choice.
 This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
 > You must install the browser. A portable version will not work. Updating the browser to it's latest version is recommended.
 
-> NOTE: Not all browsers contain the freedom of Chrome based browsers. If firefox or safari don't work, try using Chrome instead.
+> NOTE: Not all browsers contain the freedom of Chrome based browsers. If Firefox or Safari don't work, try using a chromium based browser instead instead. These include: Chrome, CHromium, Opera and Edge.
 
 # Credits
 
@@ -64,6 +64,8 @@ Inside your CMD or Terminal, navigate to the location of the jar and type:
 and press enter.
 
 You can usually hold shift and right click inside the folder where the jar is to open the CMD or Terminal in that location.
+
+> If your command doesn't execute, you need to update your path variables. Make an issue or google "How to update Java path for *YOUR OS*"
 
 # Home
 
