@@ -97,7 +97,7 @@ Just select the main download folder in the settings. The default one is your ho
 
 You can now choose the browser you want to use with selenium.
 Be sure to select it before downloading anything. You must have the chosen browser installed.
-You can adjust your settings by going to Settings > Open Settings in the menu bar.
+You can adjust your settings by going to Settings > Open Settings in the menu bar or use the command CTRL + S.
 
 # Series Details
 
