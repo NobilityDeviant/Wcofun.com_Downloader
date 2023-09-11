@@ -40,7 +40,7 @@ You will also need a browser of your choice.
 This program works with: Chrome, Chromium, Opera, Edge, Firefox or Safari.
 > You must install the browser. A portable version will not work. Updating the browser to it's latest version is recommended.
 
-> NOTE: Not all browsers contain the freedom of Chrome based browsers. If Firefox or Safari don't work, try using a chromium based browser instead instead. These include: Chrome, CHromium, Opera and Edge.
+> NOTE: Not all browsers contain the freedom of Chrome based browsers. If Firefox or Safari don't work, try using a chromium based browser instead instead. These include: Chrome, Chromium, Opera and Edge.
 
 # Credits
 
