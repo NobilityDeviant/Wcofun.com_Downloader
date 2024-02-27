@@ -1,5 +1,10 @@
 # Wcofun Downloader
 
+HELLO. If anybody is still using this, please note that I am almost finished with the Compose version.
+This repossitory will be archived in favor of the new one. 
+I know there are a ton of bugs and messy code, but I don't have the energy to fix it.
+The new one will be worth the wait. :)
+
 The project name can be a little misleading. The original website seems to change all the time, but it's too late to change it.
 
 This program is used to download videos and series from https://www.wcofun.com/
