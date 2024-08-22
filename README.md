@@ -1,9 +1,10 @@
 # Wcofun Downloader
 
-HELLO. If anybody is still using this, please note that I am almost finished with the Compose version.
-This repossitory will be archived in favor of the new one. 
-I know there are a ton of bugs and messy code, but I don't have the energy to fix it.
-The new one will be worth the wait. :)
+Hello everyone! There is a new version of this program that can be found here:
+
+[https://github.com/NobilityDeviant/ZenDownloader](https://github.com/NobilityDeviant/ZenDownloader)
+
+This repository will now remain archived forever. Feel free to use it as you wish.
 
 The project name can be a little misleading. The original website seems to change all the time, but it's too late to change it.
 
@@ -146,18 +147,7 @@ Enjoy and have fun!
 Find my projects useful? Consider donating as it will motivate me to create more free projects. :)
 Thank you for the consideration.
 
-## PayPal:
+# Buy Me A Coffee 
 
-[![PayPal Donate](images/paypal.png?raw=true "Paypal Donate")](https://www.paypal.com/donate/?business=M437F4ZLECMJG&no_recurring=0&item_name=Like+my+programs+or+contributions?+You+can+help+me+out+with+a+donation+in+any+amount.+Thank+you+for+considering%21+%F0%9F%91%8D%0A&currency_code=USD)
+[https://buymeacoffee.com/nobilitydeviant](https://buymeacoffee.com/nobilitydeviant)
 
-## Cashapp:
-
-**$nobilitydev**
-
-## LTC:
-
-**LSoTLAvD7LtEXv3hUfojis4JyTRUb2LczB**
-
-## ETH:
-
-**0x2476dC02c0B096cF96F09594d1879c2f8Dc1b977**
