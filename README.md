@@ -1,10 +1,12 @@
-# Wcofun Downloader
+# New Version
 
 Hello everyone! There is a new version of this program that can be found here:
 
 [https://github.com/NobilityDeviant/ZenDownloader](https://github.com/NobilityDeviant/ZenDownloader)
 
 This repository will now remain archived forever. Feel free to use it as you wish.
+
+# Wcofun Downloader
 
 The project name can be a little misleading. The original website seems to change all the time, but it's too late to change it.
 
